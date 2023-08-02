@@ -10,6 +10,7 @@ import (
 	"github.com/Drelf2020/utils/request"
 )
 
+// 回调任务封装
 type Job struct {
 	// 数据库内序号
 	ID     int64  `gorm:"primaryKey;autoIncrement" json:"-"`
@@ -47,6 +48,7 @@ func (js Jobs) Value() (driver.Value, error) {
 	return js.ToString(), nil
 }
 
+// 正则匹配任务
 func GetJobsByRegexp(platform, uid string) (js Jobs) {
 	var temp Jobs
 	db.Where("patten LIKE ?", platform+"%").Find(&temp)

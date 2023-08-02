@@ -7,6 +7,5 @@ import (
 )
 
 func TestMain(t *testing.T) {
-	// webhook.GetPosts()
 	webhook.Run(&webhook.Config{Debug: true})
 }

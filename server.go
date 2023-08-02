@@ -155,7 +155,7 @@ func Run(cfg *Config) {
 	// 解析图片网址并返回文件
 	// 获取参数 https://blog.csdn.net/weixin_52690231/article/details/124109518
 	// 返回文件 https://blog.csdn.net/kilmerfun/article/details/123943070
-	r.GET("fetch/*u", func(c *gin.Context) { c.File(cfg.Resource + new(data.Attachment).Make(c.Param("u")[1:])) })
+	r.GET("fetch/*u", func(c *gin.Context) { c.File(cfg.Resource + new(data.Attachment).Make(c.Param("u")[1:]).Path) })
 
 	// 获取当前在线状态
 	r.GET("/online", func(c *gin.Context) { Succeed(c, Timer.Update()) })

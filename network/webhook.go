@@ -10,7 +10,7 @@ import (
 )
 
 // 替换通配符
-func ReplaceData(text string, post *data.Post, content string) string {
+func ReplaceData(text string, post *data.Post) string {
 	return strings.NewReplacer(
 		"{mid}", post.Mid,
 		"{time}", post.Time,
@@ -25,29 +25,25 @@ func ReplaceData(text string, post *data.Post, content string) string {
 		"{follower}", post.Follower,
 		"{following}", post.Following,
 		"{attachments}", post.Attachments.ToURL(),
-		"{content}", content,
+		"{content}", post.Content,
 		"{repost.", "{",
 	).Replace(text)
 }
 
-// 回传博文
-func Webhook(post *data.Post) {
-	// 获取纯净文本
-	content := utils.Clean(post.Text)
-	if post.Repost == nil {
-		post.Repost = &data.Post{}
-	}
-	rcontent := utils.Clean(post.Repost.Text)
-
-	// 正则匹配任务
-	loop := utils.EventLoop[*request.Result]{}
-	for _, job := range user.GetJobsByRegexp(post.Platform, post.Uid) {
-		for k, v := range job.Data {
-			v = ReplaceData(v, post, content)
-			v = ReplaceData(v, post.Repost, rcontent)
-			job.Data[k] = v
-		}
-		loop.AddFunc(job.Request)
-	}
-	loop.Wait()
+// 回调博文
+func Webhook(p *data.Post) {
+	jobs := user.GetJobsByRegexp(p.Platform, p.Uid)
+	utils.Await(
+		func(job user.Job) *request.Result {
+			for k, v := range job.Data {
+				v = ReplaceData(v, p)
+				if p.Repost != nil {
+					v = ReplaceData(v, p.Repost)
+				}
+				job.Data[k] = v
+			}
+			return job.Request()
+		},
+		&jobs,
+	)
 }

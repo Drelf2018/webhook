@@ -2,6 +2,7 @@ package webhook
 
 import "github.com/Drelf2018/webhook/data"
 
+// webhook 配置
 type Config struct {
 	// 资源文件夹
 	Resource string

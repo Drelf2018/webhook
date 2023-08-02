@@ -22,15 +22,16 @@ func (m *Monitor) In(uid string) bool {
 
 // 储存所有分支
 func (m *Monitor) SaveAsBranches() {
-	loop := utils.EventLoop[any]{}
+	loop := utils.EventLoop[any, any, []any]{Results: &[]any{}}
 	for p := range m.Posts {
 		p.Blogger.ID = m.final.Blogger.ID
 		p.Repost = m.final.Repost
-		loop.AddF(p.SaveAsBranche)
+		loop.AddTask(p.SaveAsBranche)
 	}
 	loop.Wait()
 }
 
+// 解析接收到的博文
 func (m *Monitor) Parse(post *data.Post) {
 	if m.Score >= 1 {
 		// 说明已经在处理了
@@ -74,6 +75,7 @@ type monitors map[string]*Monitor
 
 var Monitors = make(monitors)
 
+// 获取检查器
 func (ms *monitors) Get(id string) *Monitor {
 	m, ok := (*ms)[id]
 	if !ok {

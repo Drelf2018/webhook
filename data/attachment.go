@@ -29,14 +29,18 @@ type Attachment struct {
 }
 
 // 构造函数
-func (a *Attachment) Make(url string) string {
+func (a *Attachment) Make(url string) *Attachment {
 	if url != "" {
 		a.Path = regexp.MustCompile("https?:/").ReplaceAllString(url, "")
 		if a.NotExist() {
 			a.Download(url)
 		}
 	}
-	return a.Path
+	return a
+}
+
+func NewA(url string) Attachment {
+	return *new(Attachment).Make(url)
 }
 
 func (a *Attachment) Scan(val any) error {
@@ -94,8 +98,7 @@ func (a *Attachment) Download(url string) {
 type Attachments []Attachment
 
 func (as *Attachments) Make(urls ...string) {
-	*as = make(Attachments, len(urls))
-	utils.List(func(i int) { (*as)[i].Make(urls[i]) }, len(urls))
+	utils.AwaitWith(NewA, &urls, as)
 }
 
 // 转字符串
