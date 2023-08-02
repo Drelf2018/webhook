@@ -21,5 +21,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }} # 一个默认的变量，用来实现往 Release 中添加文件
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          goversion: 1.18 # 可以指定编译使用的 Golang 版本
+          goversion: 1.20 # 可以指定编译使用的 Golang 版本
+          project_path: build # 修改 go build 目录
           binary_name: "webhook" # 可以指定二进制文件的名称
