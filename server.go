@@ -191,9 +191,17 @@ func Run(cfg *Config) {
 		r.Static(cfg.Resource, cfg.Resource)
 		r.StaticFile("favicon.ico", cfg.Resource+"/favicon.ico")
 		// 具体接口实现
-		utils.Ternary(cfg.BeforeAuthorize == nil, cfg.BeforeAuthorize, BeforeAuthorize)(r)
+		if cfg.BeforeAuthorize != nil {
+			cfg.BeforeAuthorize(r)
+		} else {
+			BeforeAuthorize(r)
+		}
 		r.Use(Authorize)
-		utils.Ternary(cfg.AfterAuthorize == nil, AfterAuthorize, cfg.AfterAuthorize)(r)
+		if cfg.AfterAuthorize != nil {
+			cfg.AfterAuthorize(r)
+		} else {
+			AfterAuthorize(r)
+		}
 	}
 	// 运行 gin 服务器 默认 0.0.0.0:9000
 	r.Run(cfg.Addr())
