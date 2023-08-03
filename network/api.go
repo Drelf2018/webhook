@@ -1,44 +1,64 @@
 package network
 
-// type ApiData struct {
-// 	Code int64     `json:"code"`
-// 	Data []Replies `json:"data"`
-// }
+import (
+	"errors"
+	"fmt"
+	"strconv"
 
-// type Replies struct {
-// 	Member struct {
-// 		Mid   string `json:"mid"`
-// 		Uname string `json:"uname"`
-// 	} `json:"member"`
-// 	Content struct {
-// 		Message string `json:"message"`
-// 	} `json:"content"`
-// }
+	"github.com/Drelf2020/utils/request"
+)
 
-// // 返回最近回复
-// func GetReplies() []Replies {
-// 	BaseURL := "https://aliyun.nana7mi.link/comment.get_comments(%v,comment.CommentResourceType.DYNAMIC:parse,1:int).replies"
+type ApiData struct {
+	Code int       `json:"code"`
+	Data []Replies `json:"data"`
+}
 
-// 	resp, err := http.Get(fmt.Sprintf(BaseURL, cfg.Oid))
-// 	if !printErr(err) {
-// 		return nil
-// 	}
+type Replies struct {
+	Member struct {
+		Mid   string `json:"mid"`
+		Uname string `json:"uname"`
+	} `json:"member"`
+	Content struct {
+		Message string `json:"message"`
+	} `json:"content"`
+}
 
-// 	body, err := ioutil.ReadAll(resp.Body)
-// 	defer resp.Body.Close()
-// 	if !printErr(err) {
-// 		return nil
-// 	}
+var (
+	OID = ""
+	Url = ""
+)
 
-// 	var Api ApiData
-// 	err = json.Unmarshal(body, &Api)
-// 	if !printErr(err) {
-// 		return nil
-// 	}
+// 构建网址
+func MakeUrl() {
+	Url = fmt.Sprintf("https://aliyun.nana7mi.link/comment.get_comments(%v,comment.CommentResourceType.DYNAMIC:parse,1:int).replies", OID)
+}
 
-// 	if Api.Code != 0 {
-// 		return nil
-// 	}
+// 返回最近回复
+func GetReplies() ([]Replies, error) {
+	var Api ApiData
+	err := request.Get(Url).Json(&Api)
+	if err != nil {
+		return nil, err
+	}
+	if Api.Code != 0 {
+		return nil, errors.New("返回代码：" + strconv.Itoa(Api.Code) + " 错误")
+	}
+	return Api.Data, nil
+}
 
-// 	return Api.Data
-// }
+// 检查回复
+func MatchReplies(uid, pwd string) (bool, error) {
+	rs, err := GetReplies()
+	if err != nil {
+		return false, err
+	}
+	for _, r := range rs {
+		if r.Member.Mid != uid {
+			continue
+		}
+		if r.Content.Message == pwd {
+			return true, nil
+		}
+	}
+	return false, nil
+}
