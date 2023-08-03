@@ -11,15 +11,12 @@ type Config struct {
 	Resource string
 	// 数据库文件名
 	File string
-
 	// 服务器启动 IP
 	Url string
 	// 启动端口
 	Port string
-
 	// gin 启动模式
 	Debug bool
-
 	// 自定义全接口
 	//
 	// DIY 不为 nil 时仅执行此函数 不会执行下面的鉴权前后函数

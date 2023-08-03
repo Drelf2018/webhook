@@ -23,8 +23,8 @@ type User struct {
 	Uid        string  `gorm:"primaryKey" json:"uid"`
 	Token      string  `json:"-"`
 	Permission float64 `json:"permission"`
-	Jobs       `form:"jobs" json:"jobs" yaml:"jobs"`
-	Listening  `form:"listening" json:"listening" yaml:"listening"`
+	Jobs       `form:"jobs" json:"-"`
+	Listening  `form:"listening" json:"-"`
 }
 
 // 构造函数

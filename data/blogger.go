@@ -8,9 +8,9 @@ import (
 // 博主信息部分
 type Blogger struct {
 	ID          int64      `gorm:"primaryKey;autoIncrement" form:"-" json:"-"`
-	Platform    string     `form:"platform" json:"platform"`
+	Platform    string     `form:"platform" json:"-"`
 	Uid         string     `form:"uid" json:"uid"`
-	CreatedAt   string     `gorm:"column:create" form:"create" json:"create"`
+	Create      string     `form:"create" json:"create"`
 	Name        string     `form:"name" json:"name"`
 	Face        Attachment `form:"-" json:"face"`
 	Pendant     Attachment `form:"-" json:"pendant"`

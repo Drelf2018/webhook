@@ -25,7 +25,7 @@ type Post struct {
 	// 来源
 	Source string `form:"source" json:"source"`
 	// 博主
-	Blogger
+	Blogger `json:"blogger"`
 	// 附件
 	Attachments `form:"-" json:"attachments"`
 	// 回复
@@ -33,7 +33,7 @@ type Post struct {
 	// 被回复
 	Comments []*Comment `gorm:"-" form:"-" json:"comments"`
 	// 提交者
-	Submitter *user.User `form:"-"`
+	Submitter *user.User `form:"-" json:"submitter"`
 }
 
 func (p *Post) Insert(c *Comment) {
