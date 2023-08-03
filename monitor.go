@@ -62,7 +62,9 @@ func (m *Monitor) Parse(post *data.Post) {
 	// 找到相似度最高的
 	m.final = post
 	for p, s := range m.Posts {
-		m.final = utils.Ternary(s > m.Posts[m.final], p, m.final)
+		if s > m.Posts[m.final] {
+			m.final = p
+		}
 	}
 	// 下述任务都执行完成就可以删除该检查器了
 	m.final.Save()

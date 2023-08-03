@@ -61,7 +61,7 @@ func (a Attachment) String() string {
 
 // 转链接
 func (a Attachment) ToURL() string {
-	return Resource + a.Path
+	return "/" + Resource + a.Path
 }
 
 // 判断附件是否存在

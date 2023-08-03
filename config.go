@@ -1,6 +1,9 @@
 package webhook
 
-import "github.com/Drelf2018/webhook/data"
+import (
+	"github.com/Drelf2018/webhook/data"
+	"github.com/gin-gonic/gin"
+)
 
 // webhook 配置
 type Config struct {
@@ -16,6 +19,15 @@ type Config struct {
 
 	// gin 启动模式
 	Debug bool
+
+	// 自定义全接口
+	//
+	// DIY 不为 nil 时仅执行此函数 不会执行下面的鉴权前后函数
+	DIY func(r *gin.Engine)
+	// 鉴权前
+	BeforeAuthorize func(r *gin.Engine)
+	// 鉴权后
+	AfterAuthorize func(r *gin.Engine)
 }
 
 // 自动填充

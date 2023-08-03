@@ -2,7 +2,6 @@ package webhook
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/Drelf2018/webhook/data"
 	"github.com/Drelf2018/webhook/user"
@@ -10,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 返回数据
+// 返回成功数据
 func Succeed(c *gin.Context, data ...any) {
 	obj := gin.H{"code": 0}
 	if len(data) == 1 {
@@ -25,6 +24,7 @@ func Succeed(c *gin.Context, data ...any) {
 	c.JSON(200, obj)
 }
 
+// 返回错误信息
 func Failed(c *gin.Context, code int, message string, data ...any) {
 	obj := gin.H{"code": code, "message": message}
 	for i := 0; i < len(data); i += 2 {
@@ -50,19 +50,19 @@ func Authorize(c *gin.Context) {
 	c.Set("user", user)
 }
 
-// 获取 beginTs 时间之后的所有博文
+// 获取 begin 与 end 时间范围内的所有博文
 func GetPosts(c *gin.Context) {
-	// 10 秒的冗余还是太短了啊 没事的 10 秒也很厉害了
-	TimeNow := time.Now().Unix()
-	beginTs := c.Query("begin")
-	endTs := c.Query("end")
-
-	begin := utils.Ternary(beginTs != "", beginTs, utils.Time{Stamp: TimeNow - 30}.ToString())
-	end := utils.Ternary(endTs != "", endTs, utils.Time{Stamp: TimeNow}.ToString())
-
-	posts := new([]data.Post)
-	data.GetPosts(begin, end, posts)
-
+	begin, end := c.Query("begin"), c.Query("end")
+	TimeNow := utils.NewTime(nil)
+	if end == "" {
+		end = TimeNow.ToString()
+	}
+	if begin == "" {
+		// 10 秒的冗余还是太短了啊 没事的 10 秒也很厉害了
+		begin = TimeNow.Delay(-30).ToString()
+	}
+	posts := make([]data.Post, 0)
+	data.GetPosts(begin, end, &posts)
 	Succeed(c, "posts", posts, "online", Timer.Update())
 }
 
@@ -101,9 +101,9 @@ func Submit(c *gin.Context) {
 func GetBranches(c *gin.Context) {
 	platform := c.Param("platform")
 	mid := c.Param("mid")
-	r := new([]data.Post)
-	data.GetBranches(platform, mid, r)
-	Succeed(c, r)
+	posts := make([]data.Post, 0)
+	data.GetBranches(platform, mid, &posts)
+	Succeed(c, posts)
 }
 
 // 获取所有评论
@@ -118,6 +118,13 @@ func GetComments(c *gin.Context) {
 	cs := data.Comments{Root: p}
 	cs.Query()
 	Succeed(c, cs.Root)
+}
+
+// 获取参数 https://blog.csdn.net/weixin_52690231/article/details/124109518
+// 返回文件 https://blog.csdn.net/kilmerfun/article/details/123943070
+// 重定向至 https://www.ngui.cc/el/3757797.html?action=onClick
+func FetchFile(c *gin.Context) {
+	c.Request.URL.Path = data.NewA(c.Param("url")[1:]).ToURL()
 }
 
 // 解决跨域问题
@@ -135,27 +142,10 @@ func Cors(c *gin.Context) {
 	}
 }
 
-func Run(cfg *Config) {
-	// 自动填充
-	cfg.AutoFill()
-
-	// 设置运行模式
-	gin.SetMode(utils.Ternary(cfg.Debug, gin.DebugMode, gin.ReleaseMode))
-
-	r := gin.Default()
-
-	// 跨域设置
-	r.Use(Cors)
-
-	// 资源文件相关
-	data.Reset(cfg.Resource, cfg.File)
-	r.Static(cfg.Resource, cfg.Resource)
-	r.StaticFile("favicon.ico", cfg.Resource+"/favicon.ico")
-
+// 鉴权前
+func BeforeAuthorize(r *gin.Engine) {
 	// 解析图片网址并返回文件
-	// 获取参数 https://blog.csdn.net/weixin_52690231/article/details/124109518
-	// 返回文件 https://blog.csdn.net/kilmerfun/article/details/123943070
-	r.GET("fetch/*u", func(c *gin.Context) { c.File(cfg.Resource + new(data.Attachment).Make(c.Param("u")[1:]).Path) })
+	r.GET("fetch/*url", FetchFile, func(c *gin.Context) { r.HandleContext(c) })
 
 	// 获取当前在线状态
 	r.GET("/online", func(c *gin.Context) { Succeed(c, Timer.Update()) })
@@ -168,10 +158,10 @@ func Run(cfg *Config) {
 	r.GET("/branches/:platform/:mid", GetBranches)
 
 	r.GET("/comments/:platform/:mid", GetComments)
+}
 
-	// 以下操作需要通过登录验证
-	r.Use(Authorize)
-
+// 鉴权后
+func AfterAuthorize(r *gin.Engine) {
 	// 更新自身在线状态
 	r.GET("/ping", func(c *gin.Context) { Timer.Update(GetUser(c).Uid) })
 
@@ -182,7 +172,29 @@ func Run(cfg *Config) {
 	r.POST("/submit", Submit)
 
 	// 注册 获取token 修改用户信息 提交配置信息
+}
 
+func Run(cfg *Config) {
+	// 自动填充配置
+	cfg.AutoFill()
+	// 设置运行模式
+	gin.SetMode(utils.Ternary(cfg.Debug, gin.DebugMode, gin.ReleaseMode))
+	r := gin.Default()
+	// 载入 handlers
+	if cfg.DIY != nil {
+		cfg.DIY(r)
+	} else {
+		// 跨域设置
+		r.Use(Cors)
+		// 资源文件相关
+		data.Reset(cfg.Resource, cfg.File)
+		r.Static(cfg.Resource, cfg.Resource)
+		r.StaticFile("favicon.ico", cfg.Resource+"/favicon.ico")
+		// 具体接口实现
+		utils.Ternary(cfg.BeforeAuthorize == nil, cfg.BeforeAuthorize, BeforeAuthorize)(r)
+		r.Use(Authorize)
+		utils.Ternary(cfg.AfterAuthorize == nil, AfterAuthorize, cfg.AfterAuthorize)(r)
+	}
 	// 运行 gin 服务器 默认 0.0.0.0:9000
 	r.Run(cfg.Addr())
 }

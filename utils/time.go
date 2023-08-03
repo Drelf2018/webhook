@@ -54,6 +54,14 @@ func (t Time) ToDate() time.Time {
 	return time.Time{}
 }
 
+// 以当前为基准延后
+func (t Time) Delay(seconds int64) Time {
+	return Time{Stamp: t.ToStamp() + seconds}
+}
+
+// 支持格式 string int64 time.Time
+//
+// 特别的 使用 nil 时将以当前时间创建
 func NewTime(t any) Time {
 	switch t := t.(type) {
 	case string:
@@ -62,6 +70,8 @@ func NewTime(t any) Time {
 		return Time{Stamp: t}
 	case time.Time:
 		return Time{Date: t}
+	case nil:
+		return Time{Stamp: time.Now().Unix()}
 	}
 	return Time{}
 }
