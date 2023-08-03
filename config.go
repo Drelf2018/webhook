@@ -25,6 +25,8 @@ type Config struct {
 	BeforeAuthorize func(r *gin.Engine)
 	// 鉴权后
 	AfterAuthorize func(r *gin.Engine)
+	// 其他参数
+	Map gin.H
 }
 
 // 自动填充
