@@ -46,7 +46,7 @@ func Authorize(c *gin.Context) {
 		Failed(c, 1, "登录失败", "received", token)
 		return
 	}
-	Timer.Update(user.Uid)
+	utils.Timer(user.Uid)
 	c.Set("user", user)
 }
 
@@ -63,7 +63,7 @@ func GetPosts(c *gin.Context) {
 	}
 	posts := make([]data.Post, 0)
 	data.GetPosts(begin, end, &posts)
-	Succeed(c, "posts", posts, "online", Timer.Update())
+	Succeed(c, "posts", posts, "online", utils.Timer())
 }
 
 // 提交博文
@@ -163,7 +163,7 @@ func BeforeAuthorize(r *gin.Engine) {
 // 鉴权后
 func AfterAuthorize(r *gin.Engine) {
 	// 更新自身在线状态
-	r.GET("/ping", func(c *gin.Context) { Timer.Update(GetUser(c).Uid) })
+	r.GET("/ping", func(c *gin.Context) { utils.Timer(GetUser(c).Uid) })
 
 	// 获取自身信息
 	r.GET("/user/me", func(c *gin.Context) { Succeed(c, GetUser(c)) })
