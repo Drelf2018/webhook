@@ -8,6 +8,7 @@ import (
 	"github.com/Drelf2018/webhook/user"
 	"github.com/Drelf2018/webhook/utils"
 	utils20 "github.com/Drelf2020/utils"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 )
 
@@ -183,6 +184,9 @@ func BeforeAuthorize(r *gin.Engine) {
 	// 获取当前在线状态
 	r.GET("/online", func(c *gin.Context) { Succeed(c, utils.Timer()) })
 
+	// 指定查询网址
+	network.MakeUrl("643451139714449427")
+
 	// 获取注册所需 Token
 	r.GET("/token", GetToken)
 
@@ -222,10 +226,11 @@ func Run(cfg *Config) {
 	} else {
 		// 跨域设置
 		r.Use(Cors)
+		// 主页
+		r.Use(static.Serve("/", static.LocalFile("./nana7mi.link", true)))
 		// 资源文件相关
 		data.Reset(cfg.Resource, cfg.File)
 		r.Static(cfg.Resource, cfg.Resource)
-		r.StaticFile("favicon.ico", cfg.Resource+"/favicon.ico")
 		// 具体接口实现
 		if cfg.BeforeAuthorize != nil {
 			cfg.BeforeAuthorize(r)

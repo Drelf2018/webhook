@@ -22,3 +22,42 @@ func RandomNumber(digit int) int {
 func RandomString(digit int) string {
 	return strconv.Itoa(RandomNumber(digit))
 }
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+// 随机字母
+//
+// 参考: https://xie.infoq.cn/article/f274571178f1bbe6ff8d974f3
+func RandomLetter(n int) []rune {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return b
+}
+
+// 随机混合字母的数字字符串
+//
+// digit 位数 mix 混入字母个数
+func RandomNumberMixString(digit, mix int) string {
+	if mix > digit {
+		panic("混入比原长度还长你是挺牛逼的")
+	}
+
+	isMixed := make([]rune, digit)
+	for _, r := range RandomLetter(mix) {
+		p := -1
+		for p == -1 || isMixed[p] != 0 {
+			p = rand.Intn(digit)
+		}
+		isMixed[p] = r
+	}
+
+	for i, r := range RandomString(digit) {
+		if isMixed[i] == 0 {
+			isMixed[i] = r
+		}
+	}
+
+	return string(isMixed)
+}

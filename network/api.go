@@ -8,6 +8,13 @@ import (
 	"github.com/Drelf2020/utils/request"
 )
 
+var Url string
+
+// 构建网址
+func MakeUrl(OID string) {
+	Url = fmt.Sprintf("https://aliyun.nana7mi.link/comment.get_comments(%v,comment.CommentResourceType.DYNAMIC:parse,1:int).replies", OID)
+}
+
 type ApiData struct {
 	Code int       `json:"code"`
 	Data []Replies `json:"data"`
@@ -23,19 +30,10 @@ type Replies struct {
 	} `json:"content"`
 }
 
-var (
-	OID = ""
-	Url = ""
-)
-
-// 构建网址
-func MakeUrl() {
-	Url = fmt.Sprintf("https://aliyun.nana7mi.link/comment.get_comments(%v,comment.CommentResourceType.DYNAMIC:parse,1:int).replies", OID)
-}
-
 // 返回最近回复
 func GetReplies() ([]Replies, error) {
 	var Api ApiData
+	fmt.Printf("Url: %v\n", Url)
 	err := request.Get(Url).Json(&Api)
 	if err != nil {
 		return nil, err

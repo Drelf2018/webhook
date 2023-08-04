@@ -28,4 +28,8 @@ def ping():
     print(res.text)
 
 
-submit()
+def register():
+    res = httpx.get("http://localhost:9000/register", headers={"Authorization": "190437d6-4074-4aba-b876-ae72a751cd33"})
+    print(res.text)
+
+register()

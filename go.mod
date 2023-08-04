@@ -6,6 +6,7 @@ require (
 	github.com/Drelf2020/utils v0.2.1
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/gabriel-vasile/mimetype v1.4.2
+	github.com/gin-contrib/static v0.0.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/glebarez/sqlite v1.9.0
 	github.com/satori/go.uuid v1.2.0

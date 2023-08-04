@@ -15,7 +15,7 @@ func GetRandomToken(uid string) (auth, token string) {
 	if t, ok := Uids[uid]; ok {
 		delete(Tokens, t)
 	}
-	token = utils.RandomString(6)
+	token = utils.RandomNumberMixString(6, 3)
 	auth = uuid.NewV4().String()
 	Tokens[auth] = User{Uid: uid, Token: token}
 	Uids[uid] = auth
