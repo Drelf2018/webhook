@@ -1,7 +1,6 @@
 package webhook
 
 import (
-	"github.com/Drelf2018/webhook/data"
 	"github.com/Drelf2018/webhook/network"
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/gin-gonic/gin"
@@ -35,8 +34,8 @@ type Config struct {
 
 // 自动填充
 func (c *Config) AutoFill() {
-	utils.Default(&c.Resource, data.Resource)
-	utils.Default(&c.File, data.File)
+	utils.Default(&c.Resource, "resource")
+	utils.Default(&c.File, "posts.db")
 	utils.Default(&c.Url, "0.0.0.0")
 	utils.Default(&c.Port, "9000")
 	utils.Default(&c.Github, network.Github{
