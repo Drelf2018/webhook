@@ -48,9 +48,13 @@ func GetUser(c *gin.Context) *user.User {
 // 验证授权
 func Authorize(c *gin.Context) {
 	token := c.GetHeader("Authorization")
+	if token == "" {
+		Failed(c, 1, "你是不是调错接口了啊")
+		return
+	}
 	user := new(user.User).Query(token)
 	if user == nil {
-		Failed(c, 1, "登录失败", "received", token)
+		Failed(c, 2, "鉴权失败", "received", token)
 		return
 	}
 	utils.Timer(user.Uid)
@@ -182,14 +186,20 @@ func Cors(c *gin.Context) {
 
 // 主页
 func Index(git, branche string) gin.HandlerFunc {
-	// 先判断存不存在
+	// 获取克隆后文件夹名
 	folder := strings.Replace(filepath.Base(git), ".git", "", 1)
-	_, err := os.Stat(folder)
-	if err != nil {
-		// 再决定要不要克隆
-		exec.Command("git", "clone", "-b", branche, git).Run()
-	}
-	return static.Serve("/", static.LocalFile(folder, true))
+	// 多次尝试克隆主页到本地
+	go utils.Retry[any](3, 5, func() bool {
+		// 先判断存不存在
+		_, err := os.Stat(folder)
+		if err != nil {
+			// 再决定要不要克隆
+			exec.Command("git", "clone", "-b", branche, git).Run()
+			return false
+		}
+		return true
+	})
+	return static.ServeRoot("/", "./"+folder)
 }
 
 // 鉴权前
