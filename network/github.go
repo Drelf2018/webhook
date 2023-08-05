@@ -49,9 +49,6 @@ func (g Github) NoVersion() bool {
 
 // 获取最新版本
 func (g *Github) GetLastCommit() error {
-	if g.Commit.Sha != "" {
-		return nil
-	}
 	return request.Get(g.ToAPI()).Json(g)
 }
 

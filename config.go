@@ -21,31 +21,39 @@ type Config struct {
 	// 自定义全接口
 	//
 	// DIY 不为 nil 时仅执行此函数 不会执行下面的鉴权前后函数
-	DIY func(r *gin.Engine)
+	DIY func(r *Config)
 	// 鉴权前
-	BeforeAuthorize func(r *gin.Engine)
+	BeforeAuthorize func(r *Config)
 	// 鉴权后
-	AfterAuthorize func(r *gin.Engine)
+	AfterAuthorize func(r *Config)
 	// 主页 git 链接 只需填写前三项
 	Github network.Github
 	// 其他参数
 	Map gin.H
+	// 引擎
+	*gin.Engine
 }
 
 // 自动填充
-func (c *Config) AutoFill() {
-	utils.Default(&c.Resource, "resource")
-	utils.Default(&c.File, "posts.db")
-	utils.Default(&c.Url, "0.0.0.0")
-	utils.Default(&c.Port, "9000")
-	utils.Default(&c.Github, network.Github{
+func (r *Config) AutoFill() {
+	utils.Default(&r.Resource, "resource")
+	utils.Default(&r.File, "posts.db")
+	utils.Default(&r.Url, "0.0.0.0")
+	utils.Default(&r.Port, "9000")
+	utils.Default(&r.Github, network.Github{
 		Username:   "Drelf2018",
 		Repository: "nana7mi.link",
 		Branche:    "gh-pages",
 	})
-}
-
-// 拼接地址
-func (c Config) Addr() string {
-	return c.Url + ":" + c.Port
+	if r.Engine == nil {
+		r.Engine = gin.Default()
+	}
+	if r.BeforeAuthorize == nil {
+		r.BeforeAuthorize = BeforeAuthorize
+	}
+	if r.AfterAuthorize == nil {
+		r.AfterAuthorize = AfterAuthorize
+	}
+	// 设置运行模式
+	gin.SetMode(utils.Ternary(r.Debug, gin.DebugMode, gin.ReleaseMode))
 }

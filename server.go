@@ -182,36 +182,32 @@ func Cors(c *gin.Context) {
 	}
 }
 
-// 主页
-func Index(g network.Github) gin.HandlerFunc {
-	// 多次尝试克隆主页到本地
-	go utils.Retry[any](10, 10, func() bool {
-		// 先判断存不存在
-		if utils.FileNotExists(g.Repository) {
-			// 再决定要不要克隆
-			exec.Command("git", "clone", "-b", g.Branche, g.ToGIT()).Run()
-			return false
-		}
-		// 存在则判断版本
-		if g.GetLastCommit() != nil {
-			return false
-		}
-		// 读取目录下版本信息
-		if g.NoVersion() {
-			return g.Write()
-		}
-		// 版本不正确直接删库重来
-		if !g.Check() {
-			os.RemoveAll(g.Repository)
-			return false
-		}
-		return true
-	})
-	return static.ServeRoot("/", "./"+g.Repository)
+// 主页更新
+func IndexUpdate(g network.Github) bool {
+	// 先判断存不存在
+	if utils.FileNotExists(g.Repository) {
+		// 再决定要不要克隆
+		exec.Command("git", "clone", "-b", g.Branche, g.ToGIT()).Run()
+		return false
+	}
+	// 存在则判断版本
+	if g.GetLastCommit() != nil {
+		return false
+	}
+	// 读取目录下版本信息
+	if g.NoVersion() {
+		return g.Write()
+	}
+	// 版本不正确直接删库重来
+	if !g.Check() {
+		os.RemoveAll(g.Repository)
+		return false
+	}
+	return true
 }
 
 // 鉴权前
-func BeforeAuthorize(r *gin.Engine) {
+func BeforeAuthorize(r *Config) {
 	// 解析图片网址并返回文件
 	r.GET("/fetch/*url", FetchFile, func(c *gin.Context) { r.HandleContext(c) })
 
@@ -235,7 +231,10 @@ func BeforeAuthorize(r *gin.Engine) {
 }
 
 // 鉴权后
-func AfterAuthorize(r *gin.Engine) {
+func AfterAuthorize(r *Config) {
+	// 主动更新主页
+	r.GET("/update", func(c *gin.Context) { Succeed(c, IndexUpdate(r.Github)) })
+
 	// 更新自身在线状态
 	r.GET("/ping", func(c *gin.Context) { utils.Timer(GetUser(c).Uid) })
 
@@ -248,36 +247,28 @@ func AfterAuthorize(r *gin.Engine) {
 	// 修改用户信息 提交配置信息 待实现
 }
 
-func Run(cfg *Config) {
+func Run(r *Config) {
 	// 自动填充配置
-	cfg.AutoFill()
-	// 设置运行模式
-	gin.SetMode(utils.Ternary(cfg.Debug, gin.DebugMode, gin.ReleaseMode))
-	r := gin.Default()
+	r.AutoFill()
 	// 载入 handlers
-	if cfg.DIY != nil {
-		cfg.DIY(r)
+	if r.DIY != nil {
+		r.DIY(r)
 	} else {
 		// 跨域设置
 		r.Use(Cors)
-		// 主页
-		r.Use(Index(cfg.Github))
-		// 资源文件相关
-		data.Connect(cfg.Resource, cfg.File)
-		r.Static(cfg.Resource, cfg.Resource)
+		// 多次尝试克隆主页到本地
+		go utils.Retry[network.Github](10, 10, IndexUpdate, r.Github)
+		// 主页绑定
+		r.Use(static.ServeRoot("/", "./"+r.Github.Repository))
+		// 资源数据库初始化
+		data.Connect(r.Resource, r.File)
+		// 静态资源绑定
+		r.Static(r.Resource, r.Resource)
 		// 具体接口实现
-		if cfg.BeforeAuthorize != nil {
-			cfg.BeforeAuthorize(r)
-		} else {
-			BeforeAuthorize(r)
-		}
+		r.BeforeAuthorize(r)
 		r.Use(Authorize)
-		if cfg.AfterAuthorize != nil {
-			cfg.AfterAuthorize(r)
-		} else {
-			AfterAuthorize(r)
-		}
+		r.AfterAuthorize(r)
 	}
 	// 运行 gin 服务器 默认 0.0.0.0:9000
-	r.Run(cfg.Addr())
+	r.Engine.Run(r.Url + ":" + r.Port)
 }
