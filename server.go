@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 
 	"github.com/Drelf2018/webhook/data"
 	"github.com/Drelf2018/webhook/network"
@@ -185,21 +183,31 @@ func Cors(c *gin.Context) {
 }
 
 // 主页
-func Index(git, branche string) gin.HandlerFunc {
-	// 获取克隆后文件夹名
-	folder := strings.Replace(filepath.Base(git), ".git", "", 1)
+func Index(g network.Github) gin.HandlerFunc {
 	// 多次尝试克隆主页到本地
-	go utils.Retry[any](3, 5, func() bool {
+	go utils.Retry[any](10, 10, func() bool {
 		// 先判断存不存在
-		_, err := os.Stat(folder)
-		if err != nil {
+		if utils.FileNotExists(g.Repository) {
 			// 再决定要不要克隆
-			exec.Command("git", "clone", "-b", branche, git).Run()
+			exec.Command("git", "clone", "-b", g.Branche, g.ToGIT()).Run()
+			return false
+		}
+		// 存在则判断版本
+		if g.GetLastCommit() != nil {
+			return false
+		}
+		// 读取目录下版本信息
+		if g.NoVersion() {
+			return g.Write()
+		}
+		// 版本不正确直接删库重来
+		if !g.Check() {
+			os.RemoveAll(g.Version())
 			return false
 		}
 		return true
 	})
-	return static.ServeRoot("/", "./"+folder)
+	return static.ServeRoot("/", "./"+g.Repository)
 }
 
 // 鉴权前
@@ -253,7 +261,7 @@ func Run(cfg *Config) {
 		// 跨域设置
 		r.Use(Cors)
 		// 主页
-		r.Use(Index(cfg.Git, cfg.Branche))
+		r.Use(Index(cfg.Github))
 		// 资源文件相关
 		data.Reset(cfg.Resource, cfg.File)
 		r.Static(cfg.Resource, cfg.Resource)

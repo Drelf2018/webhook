@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"github.com/Drelf2018/webhook/data"
+	"github.com/Drelf2018/webhook/network"
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -26,10 +27,8 @@ type Config struct {
 	BeforeAuthorize func(r *gin.Engine)
 	// 鉴权后
 	AfterAuthorize func(r *gin.Engine)
-	// 主页 git 链接
-	Git string
-	// 分支
-	Branche string
+	// 主页 git 链接 只需填写前三项
+	Github network.Github
 	// 其他参数
 	Map gin.H
 }
@@ -40,8 +39,11 @@ func (c *Config) AutoFill() {
 	utils.Default(&c.File, data.File)
 	utils.Default(&c.Url, "0.0.0.0")
 	utils.Default(&c.Port, "9000")
-	utils.Default(&c.Git, "https://github.com/Drelf2018/nana7mi.link.git")
-	utils.Default(&c.Branche, "gh-pages")
+	utils.Default(&c.Github, network.Github{
+		Username:   "Drelf2018",
+		Repository: "nana7mi.link",
+		Branche:    "gh-pages",
+	})
 }
 
 // 拼接地址
