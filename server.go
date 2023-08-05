@@ -2,6 +2,8 @@ package webhook
 
 import (
 	"net/http"
+	"path/filepath"
+	"runtime"
 
 	"github.com/Drelf2018/webhook/data"
 	"github.com/Drelf2018/webhook/network"
@@ -227,7 +229,9 @@ func Run(cfg *Config) {
 		// 跨域设置
 		r.Use(Cors)
 		// 主页
-		r.Use(static.Serve("/", static.LocalFile("./nana7mi.link", true)))
+		_, goPath, _, _ := runtime.Caller(0)
+		webPath := filepath.Join(filepath.Dir(goPath), "nana7mi.link")
+		r.Use(static.Serve("/", static.LocalFile(webPath, true)))
 		// 资源文件相关
 		data.Reset(cfg.Resource, cfg.File)
 		r.Static(cfg.Resource, cfg.Resource)
