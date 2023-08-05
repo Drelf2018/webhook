@@ -3,7 +3,6 @@ package webhook
 import (
 	"net/http"
 	"os"
-	"os/exec"
 
 	"github.com/Drelf2018/webhook/data"
 	"github.com/Drelf2018/webhook/network"
@@ -12,6 +11,7 @@ import (
 	utils20 "github.com/Drelf2020/utils"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+	git "github.com/go-git/go-git/v5"
 )
 
 // 返回成功数据
@@ -187,7 +187,11 @@ func IndexUpdate(g network.Github) bool {
 	// 先判断存不存在
 	if utils.FileNotExists(g.Repository) {
 		// 再决定要不要克隆
-		exec.Command("git", "clone", "-b", g.Branche, g.ToGIT()).Run()
+		git.PlainClone(g.Repository, false, &git.CloneOptions{
+			URL:           g.ToGIT(),
+			ReferenceName: g.ToReference(),
+			Progress:      os.Stdout,
+		})
 		return false
 	}
 	// 存在则判断版本
@@ -208,6 +212,9 @@ func IndexUpdate(g network.Github) bool {
 
 // 鉴权前
 func BeforeAuthorize(r *Config) {
+	// 主动更新主页
+	r.GET("/update", func(c *gin.Context) { Succeed(c, IndexUpdate(r.Github)) })
+
 	// 解析图片网址并返回文件
 	r.GET("/fetch/*url", FetchFile, func(c *gin.Context) { r.HandleContext(c) })
 
@@ -232,9 +239,6 @@ func BeforeAuthorize(r *Config) {
 
 // 鉴权后
 func AfterAuthorize(r *Config) {
-	// 主动更新主页
-	r.GET("/update", func(c *gin.Context) { Succeed(c, IndexUpdate(r.Github)) })
-
 	// 更新自身在线状态
 	r.GET("/ping", func(c *gin.Context) { utils.Timer(GetUser(c).Uid) })
 
@@ -257,7 +261,7 @@ func Run(r *Config) {
 		// 跨域设置
 		r.Use(Cors)
 		// 多次尝试克隆主页到本地
-		go utils.Retry[network.Github](10, 10, IndexUpdate, r.Github)
+		go utils.Retry(10, 10, IndexUpdate, r.Github)
 		// 主页绑定
 		r.Use(static.ServeRoot("/", "./"+r.Github.Repository))
 		// 资源数据库初始化

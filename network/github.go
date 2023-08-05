@@ -6,6 +6,7 @@ import (
 
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/Drelf2020/utils/request"
+	"github.com/go-git/go-git/v5/plumbing"
 )
 
 var (
@@ -30,6 +31,11 @@ func (g Github) ToAPI() string {
 // 转 git
 func (g Github) ToGIT() string {
 	return GIT + g.Username + "/" + g.Repository + ".git"
+}
+
+// 转莫名其妙
+func (g Github) ToReference() plumbing.ReferenceName {
+	return plumbing.ReferenceName(g.Branche)
 }
 
 // 最后一次提交记录
