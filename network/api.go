@@ -33,7 +33,6 @@ type Replies struct {
 // 返回最近回复
 func GetReplies() ([]Replies, error) {
 	var Api ApiData
-	fmt.Printf("Url: %v\n", Url)
 	err := request.Get(Url).Json(&Api)
 	if err != nil {
 		return nil, err
