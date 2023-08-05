@@ -2,8 +2,10 @@ package webhook
 
 import (
 	"net/http"
+	"os"
+	"os/exec"
 	"path/filepath"
-	"runtime"
+	"strings"
 
 	"github.com/Drelf2018/webhook/data"
 	"github.com/Drelf2018/webhook/network"
@@ -178,6 +180,18 @@ func Cors(c *gin.Context) {
 	}
 }
 
+// 主页
+func Index(git, branche string) gin.HandlerFunc {
+	// 先判断存不存在
+	folder := strings.Replace(filepath.Base(git), ".git", "", 1)
+	_, err := os.Stat(folder)
+	if err != nil {
+		// 再决定要不要克隆
+		exec.Command("git", "clone", "-b", branche, git).Run()
+	}
+	return static.Serve("/", static.LocalFile(folder, true))
+}
+
 // 鉴权前
 func BeforeAuthorize(r *gin.Engine) {
 	// 解析图片网址并返回文件
@@ -229,9 +243,7 @@ func Run(cfg *Config) {
 		// 跨域设置
 		r.Use(Cors)
 		// 主页
-		_, goPath, _, _ := runtime.Caller(0)
-		webPath := filepath.Join(filepath.Dir(goPath), "nana7mi.link")
-		r.Use(static.Serve("/", static.LocalFile(webPath, true)))
+		r.Use(Index(cfg.Git, cfg.Branche))
 		// 资源文件相关
 		data.Reset(cfg.Resource, cfg.File)
 		r.Static(cfg.Resource, cfg.Resource)
