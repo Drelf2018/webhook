@@ -48,9 +48,14 @@ func (g Github) Version() string {
 	return path.Join(g.Repository, ".version")
 }
 
-// 判断版本文件是否存在
-func (g Github) NoVersion() bool {
-	return utils.FileNotExists(g.Version())
+// 主页路径
+func (g Github) Index() string {
+	return path.Join(g.Repository, "index.html")
+}
+
+// 判断主页是否存在
+func (g Github) NoIndex() bool {
+	return utils.FileNotExists(g.Index())
 }
 
 // 获取最新版本

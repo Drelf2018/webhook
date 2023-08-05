@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -184,28 +185,24 @@ func Cors(c *gin.Context) {
 
 // 主页更新
 func IndexUpdate(g network.Github) bool {
-	// 先判断存不存在
-	if utils.FileNotExists(g.Repository) {
+	// 先获取最新版本
+	if g.GetLastCommit() != nil {
+		return false
+	}
+	// 先判断文件夹存不存在 再判断主页存不存在 再判断版本对不对
+	if utils.FileNotExists(g.Repository) || g.NoIndex() || !g.Check() {
 		// 再决定要不要克隆
-		git.PlainClone(g.Repository, false, &git.CloneOptions{
+		os.RemoveAll(g.Repository)
+		_, err := git.PlainClone(g.Repository, false, &git.CloneOptions{
 			URL:           g.ToGIT(),
 			ReferenceName: g.ToReference(),
 			Progress:      os.Stdout,
 		})
-		return false
-	}
-	// 存在则判断版本
-	if g.GetLastCommit() != nil {
-		return false
-	}
-	// 读取目录下版本信息
-	if g.NoVersion() {
+		if err != nil {
+			fmt.Printf("err: %v\n", err)
+			return false
+		}
 		return g.Write()
-	}
-	// 版本不正确直接删库重来
-	if !g.Check() {
-		os.RemoveAll(g.Repository)
-		return false
 	}
 	return true
 }
@@ -261,7 +258,7 @@ func Run(r *Config) {
 		// 跨域设置
 		r.Use(Cors)
 		// 多次尝试克隆主页到本地
-		go utils.Retry(10, 10, IndexUpdate, r.Github)
+		go utils.Retry(10, 0, IndexUpdate, r.Github)
 		// 主页绑定
 		r.Use(static.ServeRoot("/", "./"+r.Github.Repository))
 		// 资源数据库初始化
