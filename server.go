@@ -202,7 +202,7 @@ func Index(g network.Github) gin.HandlerFunc {
 		}
 		// 版本不正确直接删库重来
 		if !g.Check() {
-			os.RemoveAll(g.Version())
+			os.RemoveAll(g.Repository)
 			return false
 		}
 		return true
@@ -263,7 +263,7 @@ func Run(cfg *Config) {
 		// 主页
 		r.Use(Index(cfg.Github))
 		// 资源文件相关
-		data.Reset(cfg.Resource, cfg.File)
+		data.Connect(cfg.Resource, cfg.File)
 		r.Static(cfg.Resource, cfg.Resource)
 		// 具体接口实现
 		if cfg.BeforeAuthorize != nil {
