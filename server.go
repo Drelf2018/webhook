@@ -271,7 +271,7 @@ func Run(r *Config) {
 		// 多次尝试克隆主页到本地
 		go utils.Retry(10, 0, BoolUpdate, r.Github)
 		// 主页绑定
-		r.Use(static.ServeRoot("/", "./"+r.ToRoot(r.Repository)))
+		r.Use(static.ServeRoot("/", r.ToRoot(r.Repository)))
 		// 资源数据库初始化
 		data.Connect(r.Public, r.ToPublic(), r.ToPostsDB())
 		// 静态资源绑定
