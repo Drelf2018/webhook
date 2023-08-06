@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"errors"
 
-	"github.com/glebarez/sqlite"
 	uuid "github.com/satori/go.uuid"
 	"gorm.io/gorm"
 )
@@ -12,8 +11,8 @@ import (
 // 全局数据库
 var db *gorm.DB
 
-func init() {
-	db, _ = gorm.Open(sqlite.Open("user.db"), &gorm.Config{})
+func Connect(dialector gorm.Dialector) {
+	db, _ = gorm.Open(dialector, &gorm.Config{})
 	db.AutoMigrate(new(Jobs))
 	db.AutoMigrate(new(User))
 }

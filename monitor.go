@@ -2,7 +2,6 @@ package webhook
 
 import (
 	"github.com/Drelf2018/webhook/data"
-	"github.com/Drelf2018/webhook/network"
 	"github.com/Drelf2018/webhook/utils"
 )
 
@@ -69,7 +68,7 @@ func (m *Monitor) Parse(post *data.Post) {
 	// 下述任务都执行完成就可以删除该检查器了
 	m.final.Save()
 	m.SaveAsBranches()
-	network.Webhook(m.final)
+	m.final.Webhook()
 	delete(Monitors, m.final.Platform+m.final.Mid)
 }
 

@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/Drelf2018/webhook/data"
-	"github.com/Drelf2018/webhook/network"
 	"github.com/Drelf2018/webhook/user"
 	"github.com/Drelf2018/webhook/utils"
 	utils20 "github.com/Drelf2020/utils"
@@ -148,7 +147,7 @@ func Register(c *gin.Context) {
 		Failed(c, 1, "请先获取验证码")
 		return
 	}
-	matched, err := network.MatchReplies(u.Uid, u.Token)
+	matched, err := u.MatchReplies()
 	if err != nil {
 		Failed(c, 2, err.Error())
 		return
@@ -184,42 +183,54 @@ func Cors(c *gin.Context) {
 }
 
 // 主页更新
-func IndexUpdate(g network.Github) bool {
+func IndexUpdate(g Github) error {
+	var err error
 	// 先获取最新版本
-	if g.GetLastCommit() != nil {
-		return false
+	err = g.GetLastCommit()
+	if err != nil {
+		return err
 	}
 	// 先判断文件夹存不存在 再判断主页存不存在 再判断版本对不对
-	if utils.FileNotExists(g.Repository) || g.NoIndex() || !g.Check() {
+	folder := g.ToRoot(g.Repository)
+	if utils.FileNotExists(folder) || g.NoIndex() || !g.Check() {
 		// 再决定要不要克隆
-		os.RemoveAll(g.Repository)
-		_, err := git.PlainClone(g.Repository, false, &git.CloneOptions{
+		os.RemoveAll(folder)
+		_, err = git.PlainClone(folder, false, &git.CloneOptions{
 			URL:           g.ToGIT(),
 			ReferenceName: g.ToReference(),
 			Progress:      os.Stdout,
 		})
 		if err != nil {
-			fmt.Printf("err: %v\n", err)
-			return false
+			return err
 		}
 		return g.Write()
 	}
-	return true
+	return nil
+}
+
+// 布尔更新
+func BoolUpdate(g Github) bool {
+	fmt.Println("fetching " + g.Repository)
+	return IndexUpdate(g) == nil
 }
 
 // 鉴权前
 func BeforeAuthorize(r *Config) {
 	// 主动更新主页
-	r.GET("/update", func(c *gin.Context) { Succeed(c, IndexUpdate(r.Github)) })
+	r.GET("/update", func(c *gin.Context) {
+		err := IndexUpdate(r.Github)
+		if err != nil {
+			Failed(c, 1, err.Error())
+			return
+		}
+		Succeed(c)
+	})
 
 	// 解析图片网址并返回文件
 	r.GET("/fetch/*url", FetchFile, func(c *gin.Context) { r.HandleContext(c) })
 
 	// 获取当前在线状态
 	r.GET("/online", func(c *gin.Context) { Succeed(c, utils.Timer()) })
-
-	// 指定查询网址
-	network.MakeUrl("643451139714449427")
 
 	// 获取注册所需 Token
 	r.GET("/token", GetToken)
@@ -250,7 +261,7 @@ func AfterAuthorize(r *Config) {
 
 func Run(r *Config) {
 	// 自动填充配置
-	r.AutoFill()
+	r.fill()
 	// 载入 handlers
 	if r.DIY != nil {
 		r.DIY(r)
@@ -258,18 +269,22 @@ func Run(r *Config) {
 		// 跨域设置
 		r.Use(Cors)
 		// 多次尝试克隆主页到本地
-		go utils.Retry(10, 0, IndexUpdate, r.Github)
+		go utils.Retry(10, 0, BoolUpdate, r.Github)
 		// 主页绑定
-		r.Use(static.ServeRoot("/", "./"+r.Github.Repository))
+		r.Use(static.ServeRoot("/", "./"+r.ToRoot(r.Repository)))
 		// 资源数据库初始化
-		data.Connect(r.Resource, r.File)
+		data.Connect(r.Public, r.ToPublic(), r.ToPostsDB())
 		// 静态资源绑定
-		r.Static(r.Resource, r.Resource)
+		r.Static(r.Public, r.ToPublic())
+		// 用户数据库初始化
+		user.Connect(r.ToUsersDB())
+		// 指定查询网址
+		user.MakeUrl("643451139714449427")
 		// 具体接口实现
 		r.BeforeAuthorize(r)
 		r.Use(Authorize)
 		r.AfterAuthorize(r)
 	}
 	// 运行 gin 服务器 默认 0.0.0.0:9000
-	r.Engine.Run(r.Url + ":" + r.Port)
+	r.Run(r.Addr())
 }

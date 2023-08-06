@@ -1,4 +1,4 @@
-package network
+package user
 
 import (
 	"errors"
@@ -44,16 +44,16 @@ func GetReplies() ([]Replies, error) {
 }
 
 // 检查回复
-func MatchReplies(uid, pwd string) (bool, error) {
+func (u User) MatchReplies() (bool, error) {
 	rs, err := GetReplies()
 	if err != nil {
 		return false, err
 	}
 	for _, r := range rs {
-		if r.Member.Mid != uid {
+		if r.Member.Mid != u.Uid {
 			continue
 		}
-		if r.Content.Message == pwd {
+		if r.Content.Message == u.Token {
 			return true, nil
 		}
 	}

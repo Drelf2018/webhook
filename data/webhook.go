@@ -1,16 +1,15 @@
-package network
+package data
 
 import (
 	"strings"
 
-	"github.com/Drelf2018/webhook/data"
 	"github.com/Drelf2018/webhook/user"
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/Drelf2020/utils/request"
 )
 
 // 替换通配符
-func ReplaceData(text string, post *data.Post) string {
+func ReplaceData(text string, post *Post) string {
 	return strings.NewReplacer(
 		"{mid}", post.Mid,
 		"{time}", post.Time,
@@ -31,7 +30,7 @@ func ReplaceData(text string, post *data.Post) string {
 }
 
 // 回调博文
-func Webhook(p *data.Post) {
+func (p *Post) Webhook() {
 	jobs := user.GetJobsByRegexp(p.Platform, p.Uid)
 	utils.Await(
 		func(job user.Job) *request.Result {
