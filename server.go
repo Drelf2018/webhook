@@ -220,7 +220,7 @@ func BeforeAuthorize(r *Config) {
 	r.GET("/update", func(c *gin.Context) {
 		err := IndexUpdate(r.Github)
 		if err != nil {
-			Failed(c, 1, err.Error())
+			Failed(c, 1, err.Error(), "folder", r.ToRoot(r.Repository))
 			return
 		}
 		Succeed(c)
