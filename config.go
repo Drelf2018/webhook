@@ -1,8 +1,12 @@
 package webhook
 
 import (
+	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/gin-gonic/gin"
@@ -45,8 +49,14 @@ func (r Resource) ToRoot(files ...string) string {
 	return filepath.Join(elem...)
 }
 
-func (r Resource) ToPublic() string {
-	return filepath.Join(r.Path, r.Public)
+func (r Resource) ToPublic(files ...string) string {
+	elem := make([]string, len(files)+2)
+	elem[0] = r.Path
+	elem[1] = r.Public
+	for i, file := range files {
+		elem[i+2] = file
+	}
+	return filepath.Join(elem...)
 }
 
 func (r Resource) ToPostsDB() gorm.Dialector {
@@ -57,6 +67,40 @@ func (r Resource) ToPostsDB() gorm.Dialector {
 func (r Resource) ToUsersDB() gorm.Dialector {
 	dsn := filepath.Join(r.Path, "users.db")
 	return sqlite.Open(dsn)
+}
+
+func (r Resource) List() any {
+	data := make(map[string]any)
+	filepath.Walk(r.Path, func(path string, info fs.FileInfo, err error) error {
+		temp := data
+		dir, file := filepath.Split(path)
+		for _, p := range strings.Split(dir, string(os.PathSeparator)) {
+			if p == "" {
+				continue
+			}
+			temp = temp[p].(map[string]any)
+		}
+		if info.IsDir() {
+			temp[file] = make(map[string]any)
+		} else {
+			size := float64(info.Size())
+			unit := "TB"
+			for _, u := range []string{"Byte", "KB", "MB", "GB", "TB"} {
+				if size < 1024 {
+					unit = u
+					break
+				}
+				size /= 1024
+			}
+			if unit == "Byte" {
+				temp[file] = fmt.Sprintf("%.0f %s", size, unit)
+			} else {
+				temp[file] = fmt.Sprintf("%.1f %s", size, unit)
+			}
+		}
+		return nil
+	})
+	return data
 }
 
 // 网络
