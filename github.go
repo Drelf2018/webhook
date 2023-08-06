@@ -52,12 +52,12 @@ func (g Github) ToData() []byte {
 
 // 版本文件路径
 func (g Github) Version() string {
-	return g.ToRoot(g.Repository, ".version")
+	return g.ToPublic(g.Repository, ".version")
 }
 
 // 主页路径
 func (g Github) Index() string {
-	return g.ToRoot(g.Repository, "index.html")
+	return g.ToPublic(g.Repository, "index.html")
 }
 
 // 判断主页是否存在

@@ -191,7 +191,7 @@ func IndexUpdate(g Github) error {
 		return err
 	}
 	// 先判断文件夹存不存在 再判断主页存不存在 再判断版本对不对
-	folder := g.ToRoot(g.Repository)
+	folder := g.ToPublic(g.Repository)
 	if utils.FileNotExists(folder) || g.NoIndex() || !g.Check() {
 		// 再决定要不要克隆
 		os.RemoveAll(folder)
@@ -225,6 +225,8 @@ func BeforeAuthorize(r *Config) {
 		}
 		Succeed(c)
 	})
+
+	r.GET("/list", func(c *gin.Context) { Succeed(c, r.List()) })
 
 	// 解析图片网址并返回文件
 	r.GET("/fetch/*url", FetchFile, func(c *gin.Context) { r.HandleContext(c) })
@@ -271,7 +273,7 @@ func Run(r *Config) {
 		// 多次尝试克隆主页到本地
 		go utils.Retry(10, 0, BoolUpdate, r.Github)
 		// 主页绑定
-		r.Use(static.ServeRoot("/", r.ToRoot(r.Repository)))
+		r.Use(static.ServeRoot("/", r.ToPublic(r.Repository)))
 		// 资源数据库初始化
 		data.Connect(r.Public, r.ToPublic(), r.ToPostsDB())
 		// 静态资源绑定
