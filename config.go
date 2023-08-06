@@ -78,6 +78,9 @@ func (r Resource) List() any {
 			if p == "" {
 				continue
 			}
+			if temp[p] == nil {
+				temp[p] = make(map[string]any)
+			}
 			temp = temp[p].(map[string]any)
 		}
 		if info.IsDir() {
