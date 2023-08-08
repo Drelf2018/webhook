@@ -5,7 +5,9 @@ import (
 
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/Drelf2020/utils/request"
+	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"golang.org/x/exp/slices"
 )
 
 var (
@@ -14,72 +16,66 @@ var (
 )
 
 type Github struct {
-	*Resource
 	Username   string
 	Repository string
 	Branche    string
 	Commit     struct {
-		Sha string `json:"sha"`
+		Sha []byte `json:"sha"`
 	} `json:"commit"`
+
+	Path     string
+	HTML     string
+	Version  string
+	api, git string
 }
 
-func (g *Github) fill(res *Resource) {
-	g.Resource = res
+func (g *Github) init() string {
 	Default(&g.Username, "Drelf2018")
-	Default(&g.Repository, "nana7mi.link")
+	Default(&g.Repository, "gin.nana7mi.link")
 	Default(&g.Branche, "gh-pages")
+
+	g.api = API + g.Username + "/" + g.Repository + "/branches/" + g.Branche
+	g.git = GIT + g.Username + "/" + g.Repository + ".git"
+
+	return g.Repository
 }
 
-// 仓库对应 api
-func (g Github) ToAPI() string {
-	return API + g.Username + "/" + g.Repository + "/branches/" + g.Branche
+// 获取最新提交
+func (g *Github) GetLatestCommit() ([]byte, error) {
+	err := request.Get(g.api).Json(g)
+	return g.Commit.Sha, err
 }
 
-// 转 git
-func (g Github) ToGIT() string {
-	return GIT + g.Username + "/" + g.Repository + ".git"
+// 克隆到文件夹
+func (g Github) Clone(folder string) error {
+	_, err := git.PlainClone(folder, false, &git.CloneOptions{
+		URL:           g.git,
+		ReferenceName: plumbing.ReferenceName(g.Branche),
+		SingleBranch:  true,
+		Progress:      os.Stdout,
+	})
+	return err
 }
 
-// 转莫名其妙
-func (g Github) ToReference() plumbing.ReferenceName {
-	return plumbing.ReferenceName(g.Branche)
-}
-
-// 最后一次提交记录
-func (g Github) ToData() []byte {
-	return []byte(g.Commit.Sha)
-}
-
-// 版本文件路径
-func (g Github) Version() string {
-	return g.ToPublic(g.Repository, ".version")
-}
-
-// 主页路径
-func (g Github) Index() string {
-	return g.ToPublic(g.Repository, "index.html")
-}
-
-// 判断主页是否存在
-func (g Github) NoIndex() bool {
-	return utils.FileNotExists(g.Index())
-}
-
-// 获取最新版本
-func (g *Github) GetLastCommit() error {
-	return request.Get(g.ToAPI()).Json(g)
-}
-
-// 写入版本
-func (g Github) Write() error {
-	return os.WriteFile(g.Version(), g.ToData(), os.ModePerm)
-}
-
-// 检查版本是否正确
-func (g Github) Check() bool {
-	b, err := os.ReadFile(g.Version())
+// 先判断文件夹存不存在 再判断主页存不存在 再判断版本对不对
+func (g Github) AllExists(sha []byte) bool {
+	if utils.FileNotExists(g.Path) {
+		return false
+	}
+	if utils.FileNotExists(g.HTML) {
+		return false
+	}
+	if utils.FileNotExists(g.Version) {
+		return false
+	}
+	b, err := os.ReadFile(g.Version)
 	if err != nil {
 		return false
 	}
-	return string(b) == g.Commit.Sha
+	return slices.Equal(b, sha)
+}
+
+// 写入版本
+func (g Github) Write(sha []byte) error {
+	return os.WriteFile(g.Version, sha, os.ModePerm)
 }
