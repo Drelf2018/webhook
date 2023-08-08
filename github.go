@@ -19,7 +19,7 @@ type Github struct {
 	Repository string
 	Branche    string
 	Commit     struct {
-		Sha []byte `json:"sha"`
+		Sha string `json:"sha"`
 	} `json:"commit"`
 
 	Path     string
@@ -42,7 +42,7 @@ func (g *Github) init() string {
 // 获取最新提交
 func (g *Github) GetLatestCommit() ([]byte, error) {
 	err := request.Get(g.api).Json(g)
-	return g.Commit.Sha, err
+	return []byte(g.Commit.Sha), err
 }
 
 // 克隆到文件夹
