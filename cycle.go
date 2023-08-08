@@ -65,11 +65,19 @@ func (c Cycle) OnStatic(r *Config) {
 }
 
 func (c Cycle) Visitor(r *Config) {
+	// 版本
+	r.GET("/version", func(c *gin.Context) { Succeed(c, "v0.2.1") })
 	// 查看资源目录
 	r.GET("/list", func(c *gin.Context) { Succeed(c, r.List()) })
 
 	// 解析图片网址并返回文件
-	r.GET("/fetch/*url", FetchFile, func(c *gin.Context) { r.HandleContext(c) })
+	// 获取参数 https://blog.csdn.net/weixin_52690231/article/details/124109518
+	// 返回文件 https://blog.csdn.net/kilmerfun/article/details/123943070
+	// 重定向至 https://www.ngui.cc/el/3757797.html?action=onClick
+	r.GET("/fetch/*url", func(c *gin.Context) {
+		c.Request.URL.Path = data.NewA(c.Param("url")[1:]).ToURL()
+		r.HandleContext(c)
+	})
 
 	// 获取当前在线状态
 	r.GET("/online", func(c *gin.Context) { Succeed(c, utils.Timer()) })
@@ -112,23 +120,23 @@ func (c Cycle) OnAuthorize(r *Config) {
 
 func (c Cycle) Submitter(r *Config) {
 	// 更新自身在线状态
-	r.GET("/ping", func(c *gin.Context) { Succeed(c, utils.Timer(GetUser(c).Uid)) })
+	r.GET("/ping", func(c *gin.Context) { utils.Timer(GetUser(c).Uid) })
 
 	// 获取自身信息
 	r.GET("/me", func(c *gin.Context) { Succeed(c, GetUser(c)) })
-
-	// 提交博文
-	r.POST("/submit", Submit)
 
 	// 主动更新主页
 	r.GET("/update", func(c *gin.Context) {
 		err := r.IndexUpdate()
 		if err != nil {
-			Failed(c, 1, err.Error(), "folder", r.ToIndex())
+			Failed(c, 1, err.Error())
 			return
 		}
 		Succeed(c)
 	})
+
+	// 提交博文
+	r.POST("/submit", Submit)
 
 	// 修改用户信息 提交配置信息 待实现
 }

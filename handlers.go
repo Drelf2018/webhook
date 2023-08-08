@@ -138,10 +138,3 @@ func Register(c *gin.Context) {
 	user.Done(u.Uid)
 	Succeed(c, u.Make(u.Uid).Token)
 }
-
-// 获取参数 https://blog.csdn.net/weixin_52690231/article/details/124109518
-// 返回文件 https://blog.csdn.net/kilmerfun/article/details/123943070
-// 重定向至 https://www.ngui.cc/el/3757797.html?action=onClick
-func FetchFile(c *gin.Context) {
-	c.Request.URL.Path = data.NewA(c.Param("url")[1:]).ToURL()
-}
