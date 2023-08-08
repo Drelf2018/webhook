@@ -77,22 +77,22 @@ func AwaitWith[T any, V any, A ~[]T, R ~[]V](task func(T) V, args *A, results *R
 //
 // delay: 休眠秒数 每次重试间休眠时间
 //
-// f: 要重试的函数 支持格式 func() bool 和 func(T) bool
-//
-// args: 选填 当函数为后者时会自动将此参数中第一个(args[0])传入
-func Retry[T any](times, delay int, f any, args ...T) {
-	var do func() bool
-
-	switch f := f.(type) {
-	case func() bool:
-		do = func() bool { return f() }
-	case func(T) bool:
-		do = func() bool { return f(args[0]) }
-	default:
-		panic(fmt.Sprintf("错误的 f: %v(%T)\n", f, f))
-	}
-
-	for ; times != 0 && !do(); times-- {
+// f: 要重试的函数
+func Retry(times, delay int, f func() bool) {
+	for ; times != 0 && !f(); times-- {
+		if times > 0 {
+			println("剩余重试次数:", times-1)
+		}
 		time.Sleep(time.Duration(delay) * time.Second)
 	}
+}
+
+// 重试函数 支持一个参数
+func RetryWith[T any](times, delay int, f func(T) bool, arg T) {
+	Retry(times, delay, func() bool { return f(arg) })
+}
+
+// 重试函数 通过是否抛出 error 判断
+func RetryError(times, delay int, f func() error) {
+	Retry(times, delay, func() bool { return f() == nil })
 }
