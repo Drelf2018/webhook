@@ -4,7 +4,14 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"time"
 )
+
+var NowRand = rand.New(rand.NewSource(time.Now().Unix()))
+
+func Intn(n int) int {
+	return NowRand.Intn(n)
+}
 
 // 随机生成指定位数数字
 func RandomNumber(digit int) int {
@@ -15,7 +22,7 @@ func RandomNumber(digit int) int {
 	// 再将首位乘 10**digit 相加就能保证首位非零
 	// 从而保证位数正确
 	size := int(math.Pow10(digit - 1))
-	return (rand.Intn(9)+1)*size + rand.Intn(size)
+	return (Intn(9)+1)*size + Intn(size)
 }
 
 // 随机生成指定位数数字字符串
@@ -31,7 +38,7 @@ var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 func RandomLetter(n int) []rune {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		b[i] = letters[Intn(len(letters))]
 	}
 	return b
 }
@@ -48,7 +55,7 @@ func RandomNumberMixString(digit, mix int) string {
 	for _, r := range RandomLetter(mix) {
 		p := -1
 		for p == -1 || isMixed[p] != 0 {
-			p = rand.Intn(digit)
+			p = Intn(digit)
 		}
 		isMixed[p] = r
 	}

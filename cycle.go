@@ -66,7 +66,7 @@ func (c Cycle) OnStatic(r *Config) {
 
 func (c Cycle) Visitor(r *Config) {
 	// 版本
-	r.GET("/version", func(c *gin.Context) { Succeed(c, "v0.2.1") })
+	r.GET("/version", func(c *gin.Context) { Succeed(c, "v0.2.2") })
 	// 查看资源目录
 	r.GET("/list", func(c *gin.Context) { Succeed(c, r.List()) })
 

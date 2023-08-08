@@ -121,6 +121,9 @@ func GetToken(c *gin.Context) {
 // 注册
 func Register(c *gin.Context) {
 	auth := c.GetHeader("Authorization")
+	if auth == "" {
+		auth = c.Query("Authorization")
+	}
 	u := user.Get(auth)
 	if u.Token == "" {
 		Failed(c, 1, "请先获取验证码")
@@ -135,6 +138,13 @@ func Register(c *gin.Context) {
 		Failed(c, 3, "验证失败")
 		return
 	}
-	user.Done(u.Uid)
-	Succeed(c, u.Make(u.Uid).Token)
+	uid := u.Uid
+	user.Done(uid)
+	if u.Scan(uid) == nil {
+		// 已注册用户
+		Succeed(c, u.Token)
+	} else {
+		// 新建用户
+		Succeed(c, u.Make(uid).Token)
+	}
 }
