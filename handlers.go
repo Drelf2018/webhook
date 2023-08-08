@@ -1,8 +1,6 @@
 package webhook
 
 import (
-	"net/http"
-
 	"github.com/Drelf2018/webhook/data"
 	"github.com/Drelf2018/webhook/user"
 	"github.com/Drelf2018/webhook/utils"
@@ -37,22 +35,6 @@ func Failed(c *gin.Context, code int, message string, data ...any) {
 // 读取用户
 func GetUser(c *gin.Context) *user.User {
 	return c.MustGet("user").(*user.User)
-}
-
-// 验证授权
-func Authorize(c *gin.Context) {
-	token := c.GetHeader("Authorization")
-	if token == "" {
-		Failed(c, 1, "你是不是调错接口了啊")
-		return
-	}
-	user := new(user.User).Query(token)
-	if user == nil {
-		Failed(c, 2, "鉴权失败", "received", token)
-		return
-	}
-	utils.Timer(user.Uid)
-	c.Set("user", user)
 }
 
 // 获取 begin 与 end 时间范围内的所有博文
@@ -125,6 +107,7 @@ func GetComments(c *gin.Context) {
 	Succeed(c, cs.Root)
 }
 
+// 生成随机验证码
 func GetToken(c *gin.Context) {
 	uid := c.Query("uid")
 	if uid == "" || !utils20.IsNumber(uid) {
@@ -161,18 +144,4 @@ func Register(c *gin.Context) {
 // 重定向至 https://www.ngui.cc/el/3757797.html?action=onClick
 func FetchFile(c *gin.Context) {
 	c.Request.URL.Path = data.NewA(c.Param("url")[1:]).ToURL()
-}
-
-// 解决跨域问题
-//
-// 参考: https://blog.csdn.net/u011866450/article/details/126958238
-func Cors(c *gin.Context) {
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-	c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Cache-Control, Content-Language, Content-Type")
-	c.Header("Access-Control-Allow-Credentials", "true")
-	// 禁止所有 OPTIONS 方法 原因见博文
-	if c.Request.Method == http.MethodOptions {
-		c.AbortWithStatus(http.StatusNoContent)
-	}
 }

@@ -2,18 +2,10 @@ package user
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/Drelf2020/utils/request"
 )
-
-var Url string
-
-// 构建网址
-func MakeUrl(OID string) {
-	Url = fmt.Sprintf("https://aliyun.nana7mi.link/comment.get_comments(%v,comment.CommentResourceType.DYNAMIC:parse,1:int).replies", OID)
-}
 
 type ApiData struct {
 	Code int       `json:"code"`

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -117,4 +118,11 @@ func (r Resource) IndexUpdate() (err error) {
 		return
 	}
 	return r.Public.Github.Write(sha)
+}
+
+// 在资源目录执行命令 这是一个危险的方法
+func (r Resource) Exec(args []string) error {
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Dir = r.Path
+	return cmd.Run()
 }

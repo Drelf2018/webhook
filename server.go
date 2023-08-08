@@ -1,6 +1,8 @@
 package webhook
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,18 +15,18 @@ func Run(r *Config) {
 	r.OnCors(r)
 	// 静态资源绑定
 	r.OnStatic(r)
-	// 无鉴权接口
-	r.BeforeAuthorize(r)
-	// 鉴权
+	// 访客接口
+	r.Visitor(r)
+	// 鉴定提交者权限
 	r.OnAuthorize(r)
-	// 有鉴权接口
-	r.AfterAuthorize(r)
+	// 提交者接口
+	r.Submitter(r)
 	// 鉴定管理员权限
 	r.OnAdmin(r)
 	// 管理员接口
-	r.AfterAdmin(r)
+	r.Administrator(r)
 	// 运行 gin 服务器 默认 0.0.0.0:9000
-	r.Run(r.Addr())
+	r.Run(":" + strconv.Itoa(int(r.Port)))
 }
 
 // 测试版

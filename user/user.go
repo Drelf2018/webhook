@@ -3,15 +3,21 @@ package user
 import (
 	"database/sql/driver"
 	"errors"
+	"fmt"
 
 	uuid "github.com/satori/go.uuid"
 	"gorm.io/gorm"
 )
 
-// 全局数据库
-var db *gorm.DB
+var (
+	// 全局数据库
+	db *gorm.DB
+	// 动态评论区获取链接
+	Url string
+)
 
-func Connect(dialector gorm.Dialector) {
+func Connect(oid string, dialector gorm.Dialector) {
+	Url = fmt.Sprintf("https://aliyun.nana7mi.link/comment.get_comments(%v,comment.CommentResourceType.DYNAMIC:parse,1:int).replies", oid)
 	db, _ = gorm.Open(dialector, &gorm.Config{})
 	db.AutoMigrate(new(Jobs))
 	db.AutoMigrate(new(User))

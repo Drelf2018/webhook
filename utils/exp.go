@@ -189,6 +189,17 @@ func Keys[M ~map[K]V, K comparable, V any](m M) []K {
 	return r
 }
 
+// Index returns the index of the first occurrence of v in s,
+// or -1 if not present.
+func Index[S ~[]E, E comparable](s S, v E) int {
+	for i := range s {
+		if v == s[i] {
+			return i
+		}
+	}
+	return -1
+}
+
 // IndexFunc returns the first index i satisfying f(s[i]),
 // or -1 if none do.
 func IndexFunc[S ~[]E, E any](s S, f func(E) bool) int {
@@ -198,6 +209,11 @@ func IndexFunc[S ~[]E, E any](s S, f func(E) bool) int {
 		}
 	}
 	return -1
+}
+
+// Contains reports whether v is present in s.
+func Contains[S ~[]E, E comparable](s S, v E) bool {
+	return Index(s, v) >= 0
 }
 
 // ContainsFunc reports whether at least one
