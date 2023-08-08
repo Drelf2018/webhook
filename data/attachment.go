@@ -76,8 +76,8 @@ func (a *Attachment) ParseType() {
 
 // 保存到本地
 func (a *Attachment) SaveToLocal() {
-	os.MkdirAll(Resource+filepath.Dir(a.Path), os.ModePerm)
-	os.WriteFile(Resource+a.Path, a.data, os.ModePerm)
+	os.MkdirAll(Path+filepath.Dir(a.Path), os.ModePerm)
+	os.WriteFile(Path+a.Path, a.data, os.ModePerm)
 }
 
 // 下载附件
