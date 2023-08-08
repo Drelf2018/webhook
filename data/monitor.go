@@ -1,22 +1,21 @@
-package webhook
+package data
 
 import (
-	"github.com/Drelf2018/webhook/data"
 	"github.com/Drelf2018/webhook/utils"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
 // 博文检查器
 type Monitor struct {
 	Score float64
-	Uids  utils.Set[string]
-	Posts map[*data.Post]float64
-
-	final *data.Post
+	Posts map[*Post]float64
+	final *Post
 }
 
 // 判断用户是否已经提交
-func (m *Monitor) In(uid string) bool {
-	return m.Uids.Contains(uid)
+func (m *Monitor) Has(uid string) bool {
+	return slices.ContainsFunc(maps.Keys(m.Posts), func(p *Post) bool { return p.Submitter.Uid == uid })
 }
 
 // 储存所有分支
@@ -31,7 +30,7 @@ func (m *Monitor) SaveAsBranches() {
 }
 
 // 解析接收到的博文
-func (m *Monitor) Parse(post *data.Post) {
+func (m *Monitor) Parse(post *Post) {
 	if m.Score >= 1 {
 		// 说明已经在处理了
 		return
@@ -51,7 +50,6 @@ func (m *Monitor) Parse(post *data.Post) {
 	// 假如相似度为 100% 那得分只与 level 有关
 	// 即一个 level 1 提交即可超过阈值而至少需要五个 level 5 提交才能超过
 	m.Score += maxPercent / post.Submitter.Permission
-	m.Uids.Add(post.Submitter.Uid)
 	m.Posts[post] = totPercent
 
 	// 得分未超过阈值返回
@@ -77,15 +75,14 @@ type monitors map[string]*Monitor
 var Monitors = make(monitors)
 
 // 获取检查器
-func (ms *monitors) Get(id string) *Monitor {
-	m, ok := (*ms)[id]
+func GetMonitor(id string) *Monitor {
+	m, ok := Monitors[id]
 	if !ok {
 		m = &Monitor{
 			Score: 0,
-			Uids:  make(utils.Set[string]),
-			Posts: make(map[*data.Post]float64),
+			Posts: make(map[*Post]float64),
 		}
-		(*ms)[id] = m
+		Monitors[id] = m
 	}
 	return m
 }
