@@ -11,7 +11,6 @@ require (
 	github.com/glebarez/sqlite v1.9.0
 	github.com/go-git/go-git/v5 v5.8.1
 	github.com/satori/go.uuid v1.2.0
-	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b
 	gorm.io/gorm v1.25.2
 )
 

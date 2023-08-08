@@ -7,7 +7,6 @@ import (
 	"github.com/Drelf2020/utils/request"
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"golang.org/x/exp/slices"
 )
 
 var (
@@ -72,7 +71,7 @@ func (g Github) AllExists(sha []byte) bool {
 	if err != nil {
 		return false
 	}
-	return slices.Equal(b, sha)
+	return utils.Equal(b, sha)
 }
 
 // 写入版本

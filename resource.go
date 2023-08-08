@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Drelf2018/webhook/utils"
 	"github.com/glebarez/sqlite"
-	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 )
 
@@ -43,11 +43,11 @@ func (r *Resource) init() {
 func (r Resource) ToRoot(files ...string) string {
 	// return filepath.Join(r.Path, files...)
 	// 甚至不允许这样 这语言是有够傻逼的
-	return filepath.Join(slices.Insert(files, 0, r.Path)...)
+	return filepath.Join(utils.Insert(files, 0, r.Path)...)
 }
 
 func (r Resource) ToPublic(files ...string) string {
-	return filepath.Join(slices.Insert(files, 0, r.Path, r.Public.Path)...)
+	return filepath.Join(utils.Insert(files, 0, r.Path, r.Public.Path)...)
 }
 
 func (r Resource) ToIndex() string {

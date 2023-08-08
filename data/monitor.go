@@ -2,8 +2,6 @@ package data
 
 import (
 	"github.com/Drelf2018/webhook/utils"
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 )
 
 // 博文检查器
@@ -15,7 +13,7 @@ type Monitor struct {
 
 // 判断用户是否已经提交
 func (m *Monitor) Has(uid string) bool {
-	return slices.ContainsFunc(maps.Keys(m.Posts), func(p *Post) bool { return p.Submitter.Uid == uid })
+	return utils.ContainsFunc(utils.Keys(m.Posts), func(p *Post) bool { return p.Submitter.Uid == uid })
 }
 
 // 储存所有分支
