@@ -3,9 +3,8 @@ package data
 import (
 	"strings"
 
+	"github.com/Drelf2018/asyncio"
 	"github.com/Drelf2018/webhook/user"
-	"github.com/Drelf2018/webhook/utils"
-	"github.com/Drelf2020/utils/request"
 )
 
 // 替换通配符
@@ -32,17 +31,14 @@ func ReplaceData(text string, post *Post) string {
 // 回调博文
 func (p *Post) Webhook() {
 	jobs := user.GetJobsByRegexp(p.Platform, p.Uid)
-	utils.Await(
-		func(job user.Job) *request.Result {
-			for k, v := range job.Data {
-				v = ReplaceData(v, p)
-				if p.Repost != nil {
-					v = ReplaceData(v, p.Repost)
-				}
-				job.Data[k] = v
+	asyncio.Slice(func(job user.Job) {
+		for k, v := range job.Data {
+			v = ReplaceData(v, p)
+			if p.Repost != nil {
+				v = ReplaceData(v, p.Repost)
 			}
-			return job.Request()
-		},
-		&jobs,
-	)
+			job.Data[k] = v
+		}
+		job.Request()
+	}, asyncio.SingleArg(jobs...))
 }

@@ -1,6 +1,8 @@
 package data
 
 import (
+	"github.com/Drelf2018/asyncio"
+	"github.com/Drelf2018/cmps"
 	"github.com/Drelf2018/webhook/utils"
 )
 
@@ -13,18 +15,17 @@ type Monitor struct {
 
 // 判断用户是否已经提交
 func (m *Monitor) Has(uid string) bool {
-	return utils.ContainsFunc(utils.Keys(m.Posts), func(p *Post) bool { return p.Submitter.Uid == uid })
+	return cmps.Contains(m.Posts, func(p *Post, f float64) bool { return p.Submitter.Uid == uid })
 }
 
 // 储存所有分支
 func (m *Monitor) SaveAsBranches() {
-	loop := utils.EventLoop[any, any, []any]{Results: &[]any{}}
-	for p := range m.Posts {
+	asyncio.Map(func(p *Post, f float64) {
 		p.Blogger.ID = m.final.Blogger.ID
 		p.Repost = m.final.Repost
-		loop.AddTask(p.SaveAsBranche)
-	}
-	loop.Wait()
+		p.Submitter.LevelUP()
+		p.SaveAsBranche()
+	}, m.Posts)
 }
 
 // 解析接收到的博文
@@ -55,12 +56,15 @@ func (m *Monitor) Parse(post *Post) {
 		return
 	}
 	// 找到相似度最高的
-	m.final = post
-	for p, s := range m.Posts {
-		if s > m.Posts[m.final] {
-			m.final = p
-		}
-	}
+	// m.final = post
+	// for p, s := range m.Posts {
+	// 	if s > m.Posts[m.final] {
+	// 		m.final = p
+	// 	}
+	// 	m.final = max(m.final, p)
+	// }
+	result := cmps.Values(m.Posts)
+	m.final = result[len(result)-1].K
 	// 下述任务都执行完成就可以删除该检查器了
 	m.final.Save()
 	m.SaveAsBranches()

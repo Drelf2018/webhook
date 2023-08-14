@@ -4,11 +4,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Drelf2018/asyncio"
 	"github.com/Drelf2018/webhook/data"
 	"github.com/Drelf2018/webhook/user"
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+
+	"slices"
 )
 
 type LifeCycle interface {
@@ -38,7 +41,7 @@ func (c Cycle) OnCreate(r *Config) {
 	// 用户数据库初始化
 	user.Connect("643451139714449427", r.ToUsersDB())
 	// 多次尝试克隆主页到本地
-	go utils.RetryError(10, 0, r.IndexUpdate)
+	go asyncio.RetryError(10, 0, r.IndexUpdate)
 }
 
 // 解决跨域问题
@@ -66,7 +69,7 @@ func (c Cycle) OnStatic(r *Config) {
 
 func (c Cycle) Visitor(r *Config) {
 	// 版本
-	r.GET("/version", func(c *gin.Context) { Succeed(c, "v0.2.2") })
+	r.GET("/version", func(c *gin.Context) { Succeed(c, "v0.3.0") })
 	// 查看资源目录
 	r.GET("/list", func(c *gin.Context) { Succeed(c, r.List()) })
 
@@ -144,7 +147,7 @@ func (c Cycle) Submitter(r *Config) {
 func (c Cycle) OnAdmin(r *Config) {
 	r.Use(func(c *gin.Context) {
 		user := GetUser(c)
-		if !utils.Contains(r.Administrators, user.Uid) {
+		if !slices.Contains(r.Administrators, user.Uid) {
 			Failed(c, 1, "您没有管理员权限")
 		}
 	})

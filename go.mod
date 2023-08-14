@@ -1,8 +1,10 @@
 module github.com/Drelf2018/webhook
 
-go 1.20
+go 1.21.0
 
 require (
+	github.com/Drelf2018/asyncio v0.2.2
+	github.com/Drelf2018/cmps v1.2.0
 	github.com/Drelf2020/utils v0.2.1
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/gabriel-vasile/mimetype v1.4.2

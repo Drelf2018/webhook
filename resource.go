@@ -6,26 +6,28 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
-	"github.com/Drelf2018/webhook/utils"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
+
+type Public struct {
+	// 子文件路径
+	Path string
+	// posts 数据库文件名
+	Posts string
+	// Github 主页
+	Github Github
+}
 
 // 资源文件夹
 type Resource struct {
 	// 文件夹路径
 	Path string
 	// 公开子文件夹
-	Public struct {
-		// 子文件路径
-		Path string
-		// posts 数据库文件名
-		Posts string
-		// Github 主页
-		Github Github
-	}
+	Public
 	// users 数据库名
 	Users string
 }
@@ -44,11 +46,11 @@ func (r *Resource) init() {
 func (r Resource) ToRoot(files ...string) string {
 	// return filepath.Join(r.Path, files...)
 	// 甚至不允许这样 这语言是有够傻逼的
-	return filepath.Join(utils.Insert(files, 0, r.Path)...)
+	return filepath.Join(slices.Insert(files, 0, r.Path)...)
 }
 
 func (r Resource) ToPublic(files ...string) string {
-	return filepath.Join(utils.Insert(files, 0, r.Path, r.Public.Path)...)
+	return filepath.Join(slices.Insert(files, 0, r.Path, r.Public.Path)...)
 }
 
 func (r Resource) ToIndex() string {

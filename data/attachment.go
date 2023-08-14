@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Drelf2018/webhook/utils"
+	"github.com/Drelf2018/asyncio"
 	"github.com/Drelf2020/utils/request"
 	"github.com/gabriel-vasile/mimetype"
 	"gorm.io/gorm"
@@ -90,7 +90,7 @@ func (a *Attachment) Download(url string) {
 
 	// 判断完类型并保存在本地后再存数据库
 	// 然后前两个操作都挺费时所以都协程了
-	utils.All(a.ParseType, a.SaveToLocal)
+	asyncio.Await(asyncio.C(a.ParseType), asyncio.C(a.SaveToLocal))
 	db.Create(a)
 }
 
@@ -98,12 +98,12 @@ func (a *Attachment) Download(url string) {
 type Attachments []Attachment
 
 func (as *Attachments) Make(urls ...string) {
-	utils.AwaitWith(NewA, &urls, as)
+	*as = asyncio.H[Attachment](asyncio.Slice(NewA, asyncio.SingleArg(urls...))).To()
 }
 
 // 转字符串
 func (as *Attachments) ToString() string {
-	s := utils.Await(Attachment.String, as)
+	s := asyncio.H[string](asyncio.Slice(Attachment.String, asyncio.SingleArg(*as...))).To()
 	return strings.Join(s, ",")
 }
 

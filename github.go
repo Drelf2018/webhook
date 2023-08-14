@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"os"
+	"slices"
 
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/Drelf2020/utils/request"
@@ -71,7 +72,7 @@ func (g Github) AllExists(sha []byte) bool {
 	if err != nil {
 		return false
 	}
-	return utils.Equal(b, sha)
+	return slices.Equal(b, sha)
 }
 
 // 写入版本

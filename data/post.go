@@ -43,7 +43,6 @@ func (p *Post) Insert(c *Comment) {
 // 保存该博文
 func (p *Post) Save() {
 	p.Content = utils.Clean(p.Text)
-	p.Submitter.LevelUP()
 	p.Blogger.Save()
 	if p.Repost != nil && p.ID == 0 {
 		p.Repost.Save()

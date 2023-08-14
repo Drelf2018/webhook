@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Drelf2018/webhook/utils"
+	"github.com/Drelf2018/asyncio"
 	"github.com/Drelf2020/utils/request"
 )
 
@@ -36,7 +36,7 @@ type Jobs []Job
 
 // 转字符串
 func (js *Jobs) ToString() string {
-	s := utils.Await(Job.String, js)
+	s := asyncio.H[string](asyncio.Slice(Job.String, asyncio.SingleArg(*js...))).To()
 	return strings.Join(s, ",")
 }
 
