@@ -7,7 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Config = configs.Config
+type (
+	Config = configs.Config
+	Github = configs.Github
+	Path   = configs.Path
+)
 
 var Default = &Config{}
 var cycle configs.LifeCycle = service.Cycle(114514)
