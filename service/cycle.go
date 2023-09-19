@@ -109,7 +109,7 @@ func (c Cycle) OnAdmin(r *configs.Config) {
 
 func (c Cycle) Administrator(r *configs.Config) {
 	// 在资源文件架执行命令
-	// r.GET("/exec/*cmd", api.Cmd)
+	r.GET("/exec/*cmd", api.Cmd)
 }
 
 func (c Cycle) Bind(r *configs.Config) {
