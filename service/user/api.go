@@ -1,10 +1,9 @@
 package user
 
 import (
-	"errors"
-	"strconv"
+	"fmt"
 
-	"github.com/Drelf2020/utils/request"
+	"github.com/Drelf2018/request"
 )
 
 type ApiData struct {
@@ -24,13 +23,17 @@ type Replies struct {
 
 // 返回最近回复
 func GetReplies() ([]Replies, error) {
+	resp := request.Get(url)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
 	var Api ApiData
-	err := request.Get(Url).Json(&Api)
+	err := resp.Json(&Api)
 	if err != nil {
 		return nil, err
 	}
 	if Api.Code != 0 {
-		return nil, errors.New("返回代码：" + strconv.Itoa(Api.Code) + " 错误")
+		return nil, fmt.Errorf("返回错误代码: %v", Api.Code)
 	}
 	return Api.Data, nil
 }
