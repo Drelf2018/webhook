@@ -15,7 +15,7 @@ func Version(c *gin.Context) {
 
 // 查看资源目录
 func List(c *gin.Context) {
-	Succeed(c, data.Public())
+	Succeed(c, config.Resource)
 }
 
 // 解析图片网址并返回文件
