@@ -40,7 +40,7 @@ type Post struct {
 	// 提交者
 	Submitter *user.User `form:"-" json:"submitter"`
 	// 编辑距离
-	Distance int `gorm:"-" form:"-" json:"-" cmps:"1;order:desc"`
+	Distance int `gorm:"-" form:"-" json:"-" cmps:"1"`
 	// 替换器
 	Replacer *strings.Replacer `gorm:"-" form:"-" json:"-"`
 }
