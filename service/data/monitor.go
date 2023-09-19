@@ -1,7 +1,7 @@
 package data
 
 import (
-	"slices"
+	"golang.org/x/exp/slices"
 
 	"github.com/Drelf2018/asyncio"
 	"github.com/Drelf2018/cmps"

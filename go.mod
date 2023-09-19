@@ -16,6 +16,7 @@ require (
 	github.com/glebarez/sqlite v1.9.0
 	github.com/go-git/go-git/v5 v5.8.1
 	github.com/satori/go.uuid v1.2.0
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	gorm.io/gorm v1.25.3
 )
 
@@ -66,7 +67,6 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect

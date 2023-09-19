@@ -1,7 +1,7 @@
 package api
 
 import (
-	"slices"
+	"golang.org/x/exp/slices"
 
 	"github.com/gin-gonic/gin"
 )
