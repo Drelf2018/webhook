@@ -2,7 +2,11 @@ package data
 
 import (
 	"errors"
+	"io/fs"
+	"path/filepath"
+	"strings"
 
+	"github.com/Drelf2018/asyncio"
 	"github.com/Drelf2018/resource"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -67,4 +71,22 @@ func Preload[T any](t *T, conds ...any) error {
 
 func Preloads[T any](t *[]T, conds ...any) error {
 	return PreloadDB(new(T)).Find(t, conds...).Error
+}
+
+func CheckFiles() error {
+	files := make([]string, 0)
+	rep := strings.NewReplacer(public.Path(), "", "\\", "/")
+	filepath.Walk(public.Path(), func(path string, info fs.FileInfo, err error) error {
+		if !info.IsDir() {
+			files = append(files, rep.Replace(path))
+		}
+		return nil
+	})
+	var a Attachments
+	err := db.Not("local IN ?", files).Find(&a).Error
+	if err != nil {
+		return err
+	}
+	asyncio.ForEach(a, func(a Attachment) { asyncio.RetryError(3, 5, a.Download) })
+	return nil
 }

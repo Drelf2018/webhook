@@ -26,6 +26,8 @@ func (c Cycle) OnCreate(r *configs.Config) {
 	}
 	// 多次尝试克隆主页到本地
 	go asyncio.RetryError(10, 0, r.UpdateIndex)
+	// 检查文件是否存在
+	go data.CheckFiles()
 }
 
 // 解决跨域问题
@@ -123,6 +125,12 @@ func (c Cycle) Administrator(r *configs.Config) {
 
 	// 修改用户权限
 	r.GET("/permission/:uid/:permission", api.UpdatePermission)
+
+	// 结束进程
+	r.GET("/close", api.Close)
+
+	// 检查资源
+	r.GET("/files", api.CheckFiles)
 }
 
 func (c Cycle) Bind(r *configs.Config) {

@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 
 	"golang.org/x/exp/slices"
 
+	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/gin-gonic/gin"
 )
@@ -28,7 +31,7 @@ func Cmd(c *gin.Context) {
 		Failed(c, 1, err.Error())
 		return
 	}
-	Succeed(c, string(b))
+	Succeed(c, strings.Split(string(b), "\n"))
 }
 
 type users []user.User
@@ -67,6 +70,19 @@ func UpdatePermission(c *gin.Context) {
 	err = user.User{Uid: uid, Permission: p}.UpdatePermission()
 	if err != nil {
 		Failed(c, 2, err.Error(), "received", uid)
+		return
+	}
+	Succeed(c)
+}
+
+func Close(c *gin.Context) {
+	os.Exit(0)
+}
+
+func CheckFiles(c *gin.Context) {
+	err := data.CheckFiles()
+	if err != nil {
+		Failed(c, 1, err.Error())
 		return
 	}
 	Succeed(c)
