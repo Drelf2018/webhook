@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Drelf2018/request"
+	"golang.org/x/exp/slices"
 )
 
 type ApiData struct {
@@ -33,24 +34,18 @@ func GetReplies() ([]Replies, error) {
 		return nil, err
 	}
 	if Api.Code != 0 {
-		return nil, fmt.Errorf("返回错误代码: %v", Api.Code)
+		return nil, fmt.Errorf("api error code: %v", Api.Code)
 	}
 	return Api.Data, nil
 }
 
 // 检查回复
 func (u User) MatchReplies() (bool, error) {
-	rs, err := GetReplies()
+	rep, err := GetReplies()
 	if err != nil {
 		return false, err
 	}
-	for _, r := range rs {
-		if r.Member.Mid != u.Uid {
-			continue
-		}
-		if r.Content.Message == u.Token {
-			return true, nil
-		}
-	}
-	return false, nil
+	return slices.ContainsFunc(rep, func(r Replies) bool {
+		return r.Member.Mid == u.Uid && r.Content.Message == u.Token
+	}), nil
 }
