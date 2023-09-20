@@ -97,10 +97,17 @@ func (c Cycle) Submitter(r *configs.Config) {
 	// 主动更新主页
 	r.GET("/update", api.Update)
 
+	// 更新监听列表
+	r.GET("/modify", api.ModifyListening)
+
+	// 新增任务
+	r.POST("/add", api.AddJob)
+
+	// 移除任务
+	r.GET("/remove", api.RemoveJobs)
+
 	// 提交博文
 	r.POST("/submit", api.Submit)
-
-	// 修改用户信息 提交配置信息 待实现
 }
 
 func (c Cycle) OnAdmin(r *configs.Config) {

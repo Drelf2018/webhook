@@ -44,6 +44,48 @@ func Update(c *gin.Context) {
 	Succeed(c)
 }
 
+// 更新监听列表
+func ModifyListening(c *gin.Context) {
+	u := GetUser(c)
+	u.Listening = c.QueryArray("listen")
+	err := u.Update()
+	if err != nil {
+		Failed(c, 1, err.Error(), "received", u.Listening)
+		return
+	}
+	Succeed(c, u.Listening)
+}
+
+// 新增任务
+func AddJob(c *gin.Context) {
+	job := user.Job{}
+	err := c.Bind(&job)
+	if err != nil {
+		Failed(c, 1, err.Error(), "received", job)
+		return
+	}
+	u := GetUser(c)
+	u.Jobs = append(u.Jobs, job)
+	err = u.Update()
+	if err != nil {
+		Failed(c, 2, err.Error(), "received", u.Jobs)
+		return
+	}
+	Succeed(c, u.Jobs)
+}
+
+// 移除任务
+func RemoveJobs(c *gin.Context) {
+	ids := c.QueryArray("jobs")
+	u := GetUser(c)
+	err := u.RemoveJobs(ids)
+	if err != nil {
+		Failed(c, 1, err.Error(), "received", u.Jobs)
+		return
+	}
+	Succeed(c, u.Jobs)
+}
+
 // 提交博文
 func Submit(c *gin.Context) {
 	// 检验数据合法
