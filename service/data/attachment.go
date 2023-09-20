@@ -94,7 +94,7 @@ func Save(url string) string {
 	a := &Attachment{Url: url}
 	db.Clauses(clause.OnConflict{UpdateAll: true}).Create(a)
 	asyncio.Retry(-1, 1, a.Downloaded)
-	return a.Path()
+	return folder + a.Path()
 }
 
 func (a *Attachment) BeforeCreate(tx *gorm.DB) error {
