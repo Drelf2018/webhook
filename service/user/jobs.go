@@ -10,8 +10,8 @@ import (
 // 回调任务封装
 type Job struct {
 	// 数据库内序号
-	ID      int64 `gorm:"primaryKey;autoIncrement" json:"-"`
-	UserUid string
+	ID      int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserUid string `json:"-"`
 	Patten  string `form:"patten" json:"patten" yaml:"patten"`
 	request.Job
 }
