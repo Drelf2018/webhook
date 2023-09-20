@@ -2,7 +2,6 @@ package api
 
 import (
 	"os/exec"
-	"strings"
 
 	"golang.org/x/exp/slices"
 
@@ -17,13 +16,12 @@ func IsAdministrator(c *gin.Context) {
 }
 
 func Cmd(c *gin.Context) {
-	args := strings.Split(c.Param("cmd")[1:], "/")
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command("/bin/sh", "-c", c.Param("cmd")[1:])
 	cmd.Dir = config.Resource.Path()
-	err := cmd.Run()
+	b, err := cmd.Output()
 	if err != nil {
 		Failed(c, 1, err.Error())
 		return
 	}
-	Succeed(c)
+	Succeed(c, string(b))
 }
