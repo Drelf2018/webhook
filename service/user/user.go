@@ -49,6 +49,10 @@ func Update(x any, conds ...any) bool {
 	return !errors.Is(db.Preload(clause.Associations).First(x, conds...).Error, gorm.ErrRecordNotFound)
 }
 
+func Preloads[T any, L ~[]T](t *L, conds ...any) error {
+	return db.Preload(clause.Associations).Find(t, conds...).Error
+}
+
 func CreateTestUser() {
 	if Exists[User]("uid = ?", "188888131") {
 		return
@@ -134,6 +138,11 @@ func Query(token string) *User {
 	return &u
 }
 
+// 修改权限
+func (u User) UpdatePermission() error {
+	return db.Model(u).Update("permission", u.Permission).Error
+}
+
 // 升级
 func (u *User) LevelUP() {
 	u.Permission -= 0.01
@@ -147,7 +156,7 @@ func (u *User) LevelUP() {
 	case 0.99:
 		u.Permission = 1.0
 	}
-	db.Model(u).Update("permission", u.Permission)
+	u.UpdatePermission()
 }
 
 func (u *User) Scan(val any) error {

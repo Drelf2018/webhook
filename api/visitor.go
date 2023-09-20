@@ -10,7 +10,7 @@ import (
 
 // 当前版本号
 func Version(c *gin.Context) {
-	Succeed(c, "v0.5.0")
+	Succeed(c, "v0.5.1")
 }
 
 // 查看资源目录

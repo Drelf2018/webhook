@@ -117,6 +117,12 @@ func (c Cycle) OnAdmin(r *configs.Config) {
 func (c Cycle) Administrator(r *configs.Config) {
 	// 在资源文件架执行命令
 	r.GET("/exec/*cmd", api.Cmd)
+
+	// 获取所有用户信息
+	r.GET("/users", api.Users)
+
+	// 修改用户权限
+	r.GET("/permission/:uid/:permission", api.UpdatePermission)
 }
 
 func (c Cycle) Bind(r *configs.Config) {
