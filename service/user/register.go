@@ -22,10 +22,6 @@ func GetRandomToken(uid string) (auth, token string) {
 	return
 }
 
-func Get(auth string) User {
-	return Tokens[auth]
-}
-
 // 清理
 func Done(uid string) {
 	if t, ok := Uids[uid]; ok {
