@@ -1,14 +1,24 @@
 package api
 
 import (
+	"os"
+
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/gin-gonic/gin"
+	"gopkg.in/yaml.v2"
 )
 
 var config *configs.Config
 
 func SetConfig(c *configs.Config) *configs.Config {
+	if c == nil {
+		c = &configs.Config{}
+		b, err := os.ReadFile("config.yml")
+		if err == nil {
+			yaml.Unmarshal(b, &c)
+		}
+	}
 	config = c.Init()
 	return config
 }

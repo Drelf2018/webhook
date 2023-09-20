@@ -14,9 +14,9 @@ var (
 )
 
 type Github struct {
-	Username   string
-	Repository string
-	Branche    string
+	Username   string `yaml:"username"`
+	Repository string `yaml:"repository"`
+	Branche    string `yaml:"branche"`
 	Commit     struct {
 		Sha string `json:"sha"`
 	} `json:"commit"`

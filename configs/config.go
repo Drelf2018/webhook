@@ -24,11 +24,11 @@ func SetNil[C any, T utils.CanNil[C]](a *T, b T) {
 
 // 资源文件夹路径
 type Path struct {
-	Root   string
-	Views  string
-	Public string
-	Posts  string
-	Users  string
+	Root   string `yaml:"root"`
+	Views  string `yaml:"views"`
+	Public string `yaml:"public"`
+	Posts  string `yaml:"posts"`
+	Users  string `yaml:"users"`
 }
 
 func (p *Path) Init() {
@@ -44,15 +44,15 @@ type Config struct {
 	// 引擎
 	*gin.Engine
 	// 端口 0~65535
-	Port uint16
+	Port uint16 `yaml:"port"`
 	// 资源文件管理器
 	Resource resource.Explorer
 	// 资源文件夹路径
-	Path Path
+	Path Path `yaml:"path"`
 	// Github 主页
-	Github Github
+	Github Github `yaml:"github"`
 	// 管理员
-	Administrators []string
+	Administrators []string `yaml:"administrators"`
 }
 
 // 自动填充

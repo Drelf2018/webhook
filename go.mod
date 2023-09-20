@@ -17,6 +17,7 @@ require (
 	github.com/go-git/go-git/v5 v5.8.1
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
+	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/gorm v1.25.3
 )
 
