@@ -16,7 +16,7 @@ func IsSubmitter(c *gin.Context) {
 		Failed(c, 1, "你是不是调错接口了啊")
 		return
 	}
-	user := new(user.User).Query(token)
+	user := user.Query(token)
 	if user == nil {
 		Failed(c, 2, "鉴权失败", "received", token)
 		return
@@ -31,7 +31,8 @@ func Ping(c *gin.Context) {
 
 // 获取自身信息
 func Me(c *gin.Context) {
-	Succeed(c, GetUser(c))
+	u := GetUser(c)
+	Succeed(c, "uid", u.Uid, "permission", u.Permission, "listening", u.Listening, "jobs", u.Jobs)
 }
 
 // 主动更新主页

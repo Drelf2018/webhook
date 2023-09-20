@@ -10,7 +10,7 @@ import (
 
 // 当前版本号
 func Version(c *gin.Context) {
-	Succeed(c, "v0.4.7")
+	Succeed(c, "v0.5.0")
 }
 
 // 查看资源目录
@@ -52,8 +52,8 @@ func Register(c *gin.Context) {
 	if auth == "" {
 		auth = c.Query("Authorization")
 	}
-	u := user.Get(auth)
-	if u.Token == "" {
+	u, ok := user.Tokens[auth]
+	if !ok {
 		Failed(c, 1, "请先获取验证码")
 		return
 	}
@@ -66,14 +66,13 @@ func Register(c *gin.Context) {
 		Failed(c, 3, "验证失败")
 		return
 	}
-	uid := u.Uid
-	user.Done(uid)
-	if u.Scan(uid) == nil {
+	user.Done(u.Uid)
+	if user.Update(&u, "uid = ?", u.Uid) {
 		// 已注册用户
 		Succeed(c, u.Token)
 	} else {
 		// 新建用户
-		Succeed(c, u.Make(uid).Token)
+		Succeed(c, user.Make(u.Uid).Token)
 	}
 }
 
@@ -95,8 +94,7 @@ func GetPosts(c *gin.Context) {
 
 // 获取所有分支
 func GetBranches(c *gin.Context) {
-	platform := c.Param("platform")
-	mid := c.Param("mid")
+	platform, mid := c.Param("platform"), c.Param("mid")
 	posts := make([]data.Post, 0)
 	data.GetBranches(platform, mid, &posts)
 	Succeed(c, posts)
@@ -104,8 +102,7 @@ func GetBranches(c *gin.Context) {
 
 // 获取所有评论
 func GetComments(c *gin.Context) {
-	platform := c.Param("platform")
-	mid := c.Param("mid")
+	platform, mid := c.Param("platform"), c.Param("mid")
 	p := data.GetPost(platform, mid)
 	if p == nil {
 		Failed(c, 1, "未找到评论")
