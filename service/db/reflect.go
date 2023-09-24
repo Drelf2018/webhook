@@ -1,4 +1,4 @@
-package data
+package db
 
 import (
 	"fmt"
@@ -19,10 +19,11 @@ func ParseStruct(in any) []string {
 	preloads, ok := unsafeCache[uintptr(inf.typ)]
 	if !ok {
 		typ := reflect.TypeOf(in)
-		val := reflect.ValueOf(in)
 		if typ.Kind() == reflect.Ptr {
 			typ = typ.Elem()
-			val = val.Elem()
+		}
+		if typ.Kind() == reflect.Slice {
+			typ = typ.Elem()
 		}
 		if typ.Kind() != reflect.Struct {
 			panic("You should pass in a struct or a pointer to a struct.")
@@ -33,7 +34,8 @@ func ParseStruct(in any) []string {
 			if exists {
 				name := typ.Field(i).Name
 				if preload == "" {
-					for _, s := range ParseStruct(val.Field(i).Interface()) {
+					v := reflect.New(typ.Field(i).Type).Interface()
+					for _, s := range ParseStruct(v) {
 						preloads = append(preloads, fmt.Sprintf("%v.%v", name, s))
 					}
 				} else {

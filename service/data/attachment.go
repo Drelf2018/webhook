@@ -1,6 +1,7 @@
 package data
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -8,20 +9,17 @@ import (
 	"strings"
 
 	"github.com/Drelf2018/asyncio"
-	"github.com/Drelf2018/cmps"
 	"github.com/Drelf2018/request"
+	"github.com/Drelf2018/webhook/service/db"
 	"github.com/Drelf2020/utils"
 	"github.com/gabriel-vasile/mimetype"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 var log = utils.GetLog()
-var attachmentCache = cmps.SafeSlice[*Attachment]{I: make([]*Attachment, 0)}
 
 // 附件
 type Attachment struct {
-	Model
+	db.Model
 	// 原网址
 	Url string `form:"url" gorm:"unique" cmps:"1"`
 	// 本地路径
@@ -31,16 +29,21 @@ type Attachment struct {
 }
 
 func (a Attachment) MarshalJSON() ([]byte, error) {
-	return json.RawMessage(fmt.Sprintf(
-		`{"url":"%v","local":"%v","MIME":"%v"}`,
-		a.Url,
-		utils.Ternary(a.Local != "", folder+a.Local, ""),
-		a.MIME,
-	)), nil
+	b := bytes.NewBufferString(`{"url":"`)
+	b.WriteString(a.Url)
+	b.WriteString(`","local":"`)
+	if a.Path() != "" {
+		b.WriteString(folder)
+		b.WriteString(a.Path())
+	}
+	b.WriteString(`","MIME":"`)
+	b.WriteString(a.MIME)
+	b.WriteString(`"}`)
+	return json.RawMessage(b.Bytes()), nil
 }
 
 func (a Attachment) String() string {
-	return fmt.Sprintf("Attachment(%v)", a.ID)
+	return fmt.Sprintf("Attachment(%v, %v%v)", a.ID, a.Url, utils.Ternary(a.MIME == "", "", ", "+a.MIME))
 }
 
 func (a *Attachment) Path() string {
@@ -50,22 +53,19 @@ func (a *Attachment) Path() string {
 	return a.Local
 }
 
-func (a *Attachment) Saved() bool {
-	return Exists[Attachment]("url = ?", a.Url)
-}
-
-func (a *Attachment) Downloaded() bool {
-	return Exists[Attachment]("url = ? and mime <> \"\"", a.Url)
+func (a *Attachment) Save() {
+	if a.Url == "" {
+		return
+	}
+	Data.FirstOrCreate(nil, func() { go asyncio.RetryError(-1, 5, a.Download) }, a, "url = ?", a.Url)
 }
 
 func (a *Attachment) Store(data []byte) {
 	dir, file := filepath.Split(a.Path())
-	folder := public.MakeTo(dir)
-	folder.MkdirAll()
-	f, ok := folder.Touch(file, 0)
-	if ok {
-		f.Store(data)
-	}
+	f := public.MakeTo(dir)
+	f.MkdirAll()
+	fi, _ := f.Touch(file, 0)
+	fi.Store(data)
 }
 
 // 下载附件
@@ -81,46 +81,23 @@ func (a *Attachment) Download() error {
 		asyncio.C(func() { a.MIME = mimetype.Detect(result.Content).String() }),
 		asyncio.C(a.Store, result.Content),
 	)
-	asyncio.Retry(-1, 1, a.Saved)
-	if err := db.Updates(a).Error; err != nil {
+	log.Infof("Uploading %v", a)
+	if err := Data.Save(a).Error; err != nil {
 		log.Errorf("Update %v error: %v", a, err)
 		return err
 	}
-	attachmentCache.Delete(a)
 	return nil
 }
 
 func Save(url string) string {
 	a := &Attachment{Url: url}
-	db.Clauses(clause.OnConflict{UpdateAll: true}).Create(a)
-	asyncio.Retry(-1, 1, a.Downloaded)
+	log.Infof("Saving %v", a)
+	asyncio.RetryError(10, 5, a.Download)
 	return folder + a.Path()
-}
-
-func (a *Attachment) BeforeCreate(tx *gorm.DB) error {
-	if Update(a, "url = ?", a.Url) {
-		return nil
-	}
-	temp := attachmentCache.Search(a)
-	if temp == nil || temp.ID == 0 {
-		attachmentCache.Insert(a)
-		go asyncio.RetryError(-1, 5, a.Download)
-	} else {
-		a.ID = temp.ID
-	}
-	return nil
 }
 
 // 附件合集
 type Attachments []Attachment
-
-func (as *Attachments) Add(urls ...string) {
-	temp := make(Attachments, len(urls))
-	for i, l := 0, len(urls); i < l; i++ {
-		temp[i] = Attachment{Url: urls[i]}
-	}
-	*as = append(*as, temp...)
-}
 
 func (as Attachments) Urls() string {
 	temp := make([]string, len(as))

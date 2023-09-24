@@ -2,6 +2,7 @@ package user
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/Drelf2018/request"
 	"golang.org/x/exp/slices"
@@ -22,9 +23,21 @@ type Replies struct {
 	} `json:"content"`
 }
 
+var api *request.Job
+
+func SetApi(oid string) {
+	api = request.New(
+		http.MethodGet,
+		fmt.Sprintf(
+			"https://aliyun.nana7mi.link/comment.get_comments(%v,comment.CommentResourceType.DYNAMIC:parse,1:int).replies",
+			oid,
+		),
+	)
+}
+
 // 返回最近回复
 func GetReplies() ([]Replies, error) {
-	resp := request.Get(url)
+	resp := api.Request()
 	if resp.Error != nil {
 		return nil, resp.Error
 	}

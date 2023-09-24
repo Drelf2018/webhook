@@ -25,6 +25,6 @@ func (j Job) Match(s string) bool {
 // 正则匹配任务
 func GetJobsByRegexp(platform, uid string) []Job {
 	var temp []Job
-	db.Where("patten LIKE ?", platform+"%").Find(&temp)
+	Users.DB.Where("patten LIKE ?", platform+"%").Find(&temp)
 	return utils.Filter(temp, func(j Job) bool { return j.Match(platform + uid) })
 }

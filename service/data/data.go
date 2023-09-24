@@ -1,76 +1,31 @@
 package data
 
 import (
-	"errors"
 	"io/fs"
 	"path/filepath"
 	"strings"
 
 	"github.com/Drelf2018/asyncio"
 	"github.com/Drelf2018/resource"
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
+	"github.com/Drelf2018/webhook/configs"
+	"github.com/Drelf2018/webhook/service/db"
 )
 
-type Model struct {
-	ID uint64 `gorm:"primaryKey;autoIncrement" form:"-" json:"-"`
-}
-
 var (
-	db     *gorm.DB
+	Data   db.DB
 	folder string
 	public resource.Explorer
 )
 
+func Init(r *configs.Config) {
+	folder = "/" + r.Path.Public
+	public = r.Resource.MakeTo(r.Path.Public)
+	public.MkdirAll()
+	Data.SetSqlite(public.Path(r.Path.Posts)).AutoMigrate(&Post{})
+}
+
 func Public() resource.Explorer {
 	return public
-}
-
-func SetPublic(name string, r resource.Explorer) {
-	folder = name
-	public = r
-	public.MkdirAll()
-}
-
-func SetDB(r *gorm.DB) *gorm.DB {
-	db = r
-	db.AutoMigrate(new(Post))
-	return db
-}
-
-func SetDialector(dialector gorm.Dialector) *gorm.DB {
-	db, _ = gorm.Open(dialector, &gorm.Config{})
-	return SetDB(db)
-}
-
-func SetSqlite(file string) *gorm.DB {
-	return SetDialector(sqlite.Open(file))
-}
-
-func Exists[T any](conds ...any) bool {
-	return !errors.Is(db.First(new(T), conds...).Error, gorm.ErrRecordNotFound)
-}
-
-func Update(x any, conds ...any) bool {
-	return !errors.Is(db.First(x, conds...).Error, gorm.ErrRecordNotFound)
-}
-
-func PreloadDB(in any) (r *gorm.DB) {
-	r = db.Model(in)
-	s := ParseStruct(in)
-	for i, l := 0, len(s); i < l; i++ {
-		r.Preload(s[i])
-	}
-	return r.Preload(clause.Associations)
-}
-
-func Preload[T any](t *T, conds ...any) error {
-	return PreloadDB(new(T)).First(t, conds...).Error
-}
-
-func Preloads[T any](t *[]T, conds ...any) error {
-	return PreloadDB(new(T)).Find(t, conds...).Error
 }
 
 func CheckFiles() error {
@@ -83,7 +38,7 @@ func CheckFiles() error {
 		return nil
 	})
 	var a Attachments
-	err := db.Not("local IN ?", files).Find(&a).Error
+	err := Data.DB.Not("local IN ?", files).Find(&a).Error
 	if err != nil {
 		return err
 	}

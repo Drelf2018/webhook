@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Drelf2018/asyncio"
+	"github.com/Drelf2018/webhook/service/db"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/Drelf2018/webhook/utils"
 	"gorm.io/gorm"
@@ -13,7 +14,7 @@ import (
 
 // 博文或评论
 type Post struct {
-	Model
+	db.Model
 	// 平台
 	Platform string `form:"platform" json:"platform"`
 	// 博文序号
@@ -46,6 +47,11 @@ type Post struct {
 }
 
 func (p *Post) BeforeCreate(tx *gorm.DB) error {
+	p.Blogger.Face.Save()
+	p.Blogger.Pendant.Save()
+	for i, l := 0, len(p.Attachments); i < l; i++ {
+		p.Attachments[i].Save()
+	}
 	if reflect.DeepEqual(p.Repost, &Post{}) {
 		p.Repost = nil
 	} else {
@@ -110,7 +116,7 @@ func (p *Post) Webhook() {
 func SavePost(p *Post) {
 	p.Content = utils.Clean(p.Text)
 	p.Submitter.LevelUP()
-	db.Create(p)
+	Data.DB.Create(p)
 	go p.Webhook()
 }
 
@@ -119,27 +125,27 @@ func SavePosts(p ...*Post) {
 		return
 	}
 	asyncio.ForEach(p, func(p *Post) { p.Submitter.LevelUP() })
-	db.Create(&p)
+	Data.DB.Create(&p)
 }
 
 // 判断博文是否存在
 func HasPost(platform, mid string) bool {
-	return Exists[Post]("platform = ? AND mid = ?", platform, mid)
+	return db.Exists[Post](&Data, "platform = ? AND mid = ?", platform, mid)
 }
 
 // 通过平台和序号获取唯一博文
 func GetPost(platform, mid string) *Post {
 	var p Post
-	Preload(&p, "platform = ? AND mid = ?", platform, mid)
+	Data.Preload(&p, "platform = ? AND mid = ?", platform, mid)
 	return &p
 }
 
 // 获取分支
 func GetBranches(platform, mid string, r *[]Post) {
-	Preloads(r, "platform = ? AND mid = ?", platform, mid)
+	Data.Preloads(r, "platform = ? AND mid = ?", platform, mid)
 }
 
 // 通过起始与结束时间获取范围内博文合集
 func GetPosts(begin, end string, r *[]Post) {
-	Preloads(r, "time BETWEEN ? AND ?", begin, end)
+	Data.Preloads(r, "time BETWEEN ? AND ?", begin, end)
 }

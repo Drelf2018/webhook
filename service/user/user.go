@@ -4,79 +4,35 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
-	"github.com/Drelf2018/request"
+	"github.com/Drelf2018/resource"
+	"github.com/Drelf2018/webhook/configs"
+	"github.com/Drelf2018/webhook/service/db"
 	"github.com/Drelf2020/utils"
-	"github.com/glebarez/sqlite"
 	uuid "github.com/satori/go.uuid"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
+// 全局数据库
 var (
-	// 全局数据库
-	db *gorm.DB
-	// 动态评论区获取链接
-	url string
+	Users   db.DB
+	LogFile *resource.File
 )
 
-func SetDB(r *gorm.DB) *gorm.DB {
-	db = r
-	db.AutoMigrate(new(User))
-	return db
-}
+func Init(r *configs.Config) {
+	Users.SetSqlite(r.Resource.Path(r.Path.Users))
+	Users.AutoMigrate(&Job{})
+	Users.AutoMigrate(&User{})
+	SetApi(r.Oid)
 
-func SetDialector(dialector gorm.Dialector) *gorm.DB {
-	db, _ = gorm.Open(dialector, &gorm.Config{})
-	return SetDB(db)
-}
-
-func SetSqlite(file string) *gorm.DB {
-	return SetDialector(sqlite.Open(file))
-}
-
-func SetOid(oid string) {
-	url = fmt.Sprintf("https://aliyun.nana7mi.link/comment.get_comments(%v,comment.CommentResourceType.DYNAMIC:parse,1:int).replies", oid)
-}
-
-func Exists[T any](conds ...any) bool {
-	return !errors.Is(db.Preload(clause.Associations).First(new(T), conds...).Error, gorm.ErrRecordNotFound)
-}
-
-func Update(x any, conds ...any) bool {
-	return !errors.Is(db.Preload(clause.Associations).First(x, conds...).Error, gorm.ErrRecordNotFound)
-}
-
-func Preloads[T any, L ~[]T](t *L, conds ...any) error {
-	return db.Preload(clause.Associations).Find(t, conds...).Error
-}
-
-func CreateTestUser() {
-	if Exists[User]("uid = ?", "188888131") {
-		return
+	LogFile = r.Resource.Find(".log")
+	if LogFile == nil {
+		var ok bool
+		if LogFile, ok = r.Resource.Touch(".log", 0); !ok {
+			panic("create .log error")
+		}
 	}
-	db.Clauses(clause.OnConflict{DoNothing: true}).Create(&User{
-		Uid:        "188888131",
-		Token:      "********",
-		Permission: 1,
-		Jobs: []Job{
-			{
-				Patten: "bilibili434334701",
-				Job: request.Job{
-					Method: http.MethodPost,
-					Url:    "https://postman-echo.com/post",
-					Data: request.M{
-						"msg":    "{content}",
-						"uid":    "{uid}",
-						"origin": "{text}",
-					},
-				},
-			},
-		},
-		Listening: make(Listening, 0),
-	})
+	utils.SetOutputFile(LogFile.Path())
 }
 
 // 监听列表获取错误
@@ -106,13 +62,17 @@ type User struct {
 	Listening  Listening `form:"listening" json:"-"`
 }
 
+func (u *User) String() string {
+	return fmt.Sprintf("User(%v, %v)", u.Uid, u.Permission)
+}
+
 func (u *User) RemoveJobs(jobs []string) error {
-	defer Update(u)
-	return db.Model(&Job{}).Where("user_uid = ? and id IN ?", u.Uid, jobs).Update("user_uid", nil).Error
+	defer Users.First(u)
+	return Users.DB.Model(&Job{}).Where("user_uid = ? and id IN ?", u.Uid, jobs).Update("user_uid", nil).Error
 }
 
 func (u *User) Update() error {
-	return db.Updates(u).Error
+	return Users.DB.Updates(u).Error
 }
 
 // 构造函数
@@ -122,7 +82,7 @@ func Make(uid string) *User {
 		Token:      uuid.NewV4().String(),
 		Permission: 5.10,
 	}
-	db.Create(&u)
+	Users.DB.Create(&u)
 	return &u
 }
 
@@ -132,7 +92,7 @@ func Query(token string) *User {
 		return nil
 	}
 	var u User
-	if !Update(&u, "token = ?", token) {
+	if !Users.First(&u, "token = ?", token) {
 		return nil
 	}
 	return &u
@@ -140,7 +100,7 @@ func Query(token string) *User {
 
 // 修改权限
 func (u User) UpdatePermission() error {
-	return db.Model(u).Update("permission", u.Permission).Error
+	return Users.DB.Model(u).Update("permission", u.Permission).Error
 }
 
 // 升级
@@ -160,7 +120,7 @@ func (u *User) LevelUP() {
 }
 
 func (u *User) Scan(val any) error {
-	return db.First(u, "uid = ?", val).Error
+	return Users.Base(u, "uid = ?", val).Error()
 }
 
 func (u User) Value() (driver.Value, error) {
