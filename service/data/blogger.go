@@ -12,7 +12,7 @@ type Blogger struct {
 	db.Model
 	Platform    string `form:"platform" json:"platform"`
 	Uid         string `form:"uid" json:"uid" cmps:"1"`
-	Time        string `form:"time" json:"time"`
+	Create      string `form:"create" json:"create"`
 	Name        string `form:"name" json:"name"`
 	Description string `form:"description" json:"description"`
 	Follower    string `form:"follower" json:"follower"`
