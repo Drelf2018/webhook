@@ -5,24 +5,67 @@ import (
 	"net/http"
 
 	"github.com/Drelf2018/asyncio"
+	"github.com/Drelf2018/request"
 	"github.com/Drelf2018/webhook/api"
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
+	u20 "github.com/Drelf2020/utils"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm/clause"
 )
+
+type LifeCycle interface {
+	// 初始化
+	OnCreate(*configs.Config)
+	// 跨域设置
+	OnCors(*configs.Config)
+	// 静态资源绑定
+	OnStatic(*configs.Config)
+	// 访客接口
+	Visitor(*configs.Config)
+	// 鉴定提交者权限
+	OnAuthorize(*configs.Config)
+	// 提交者接口
+	Submitter(*configs.Config)
+	// 鉴定管理员权限
+	OnAdmin(*configs.Config)
+	// 管理员接口
+	Administrator(*configs.Config)
+	// 绑定所有接口
+	Bind(*configs.Config)
+}
 
 type Cycle int
 
 func (c Cycle) OnCreate(r *configs.Config) {
 	// 资源数据库初始化
-	data.SetSqlite(data.Public().Path(r.Path.Posts))
+	data.Init(r)
 	// 用户数据库初始化
-	user.SetOid("643451139714449427")
-	user.SetSqlite(r.Resource.Path(r.Path.Users))
-	if gin.Mode() == gin.DebugMode {
-		user.CreateTestUser()
+	user.Init(r)
+	// 初始化测试用户
+	if r.Debug {
+		user.Users.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&user.User{
+			Uid:        "188888131",
+			Token:      "********",
+			Permission: 1,
+			Jobs: []user.Job{
+				{
+					Patten: "bilibili434334701",
+					Job: request.Job{
+						Method: http.MethodPost,
+						Url:    "https://postman-echo.com/post",
+						Data: request.M{
+							"msg":    "{content}",
+							"uid":    "{uid}",
+							"origin": "{text}",
+						},
+					},
+				},
+			},
+			Listening: make(user.Listening, 0),
+		})
 	}
 	// 多次尝试克隆主页到本地
 	go asyncio.RetryError(10, 0, r.UpdateIndex)
@@ -34,16 +77,7 @@ func (c Cycle) OnCreate(r *configs.Config) {
 //
 // 参考: https://blog.csdn.net/u011866450/article/details/126958238
 func (c Cycle) OnCors(r *configs.Config) {
-	r.Use(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-		c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Cache-Control, Content-Language, Content-Type")
-		c.Header("Access-Control-Allow-Credentials", "true")
-		// 禁止所有 OPTIONS 方法 原因见博文
-		if c.Request.Method == http.MethodOptions {
-			c.AbortWithStatus(http.StatusNoContent)
-		}
-	})
+	r.Use(api.Cors)
 }
 
 func (c Cycle) OnStatic(r *configs.Config) {
@@ -83,6 +117,9 @@ func (c Cycle) Visitor(r *configs.Config) {
 
 	// 查询某博文的评论
 	r.GET("/comments/:platform/:mid", api.GetComments)
+
+	// 读取日志
+	r.GET("/log", api.ReadLog)
 }
 
 func (c Cycle) OnAuthorize(r *configs.Config) {
@@ -134,6 +171,8 @@ func (c Cycle) Administrator(r *configs.Config) {
 }
 
 func (c Cycle) Bind(r *configs.Config) {
+	// 设置模式
+	gin.SetMode(u20.Ternary(r.Debug, gin.DebugMode, gin.ReleaseMode))
 	// 初始化
 	c.OnCreate(r)
 	// 跨域设置

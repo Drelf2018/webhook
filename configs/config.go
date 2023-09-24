@@ -1,17 +1,25 @@
 package configs
 
 import (
+	"os"
+
 	"github.com/Drelf2018/resource"
-	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
+	"gopkg.in/yaml.v2"
 )
 
 // 设置值类型对象默认值
-func SetZero[T comparable](a *T, b T) {
+func SetZero[T comparable](a *T, b ...T) {
 	var zero T
 	if *a == zero {
-		*a = b
+		for _, c := range b {
+			if c == zero {
+				continue
+			}
+			*a = c
+			break
+		}
 	}
 }
 
@@ -43,8 +51,12 @@ func (p *Path) Init() {
 type Config struct {
 	// 引擎
 	*gin.Engine
+	// 测试
+	Debug bool `yaml:"debug"`
 	// 端口 0~65535
 	Port uint16 `yaml:"port"`
+	// 动态
+	Oid string `yaml:"oid"`
 	// 资源文件管理器
 	Resource resource.Explorer
 	// 资源文件夹路径
@@ -56,20 +68,16 @@ type Config struct {
 }
 
 // 自动填充
-func (r *Config) Init() *Config {
+func (r *Config) Init() {
 	r.Path.Init()
+	r.Github.Init()
 	SetZero(&r.Port, 9000)
+	SetZero(&r.Oid, "643451139714449427")
 	SetNil[gin.Engine](&r.Engine, gin.Default())
 	SetNil[string](&r.Administrators, []string{})
-
 	if r.Resource == nil {
 		r.Resource = new(resource.Resource).Init(r.Path.Root).Root
 	}
-	data.SetPublic("/"+r.Path.Public, r.Resource.MakeTo(r.Path.Public))
-
-	r.Github.Init()
-
-	return r
 }
 
 // 更新主页
@@ -103,23 +111,20 @@ func (r *Config) UpdateIndex() (err error) {
 	return ver.Write(r.Github.Commit.Sha)
 }
 
-type LifeCycle interface {
-	// 初始化
-	OnCreate(*Config)
-	// 跨域设置
-	OnCors(*Config)
-	// 静态资源绑定
-	OnStatic(*Config)
-	// 访客接口
-	Visitor(*Config)
-	// 鉴定提交者权限
-	OnAuthorize(*Config)
-	// 提交者接口
-	Submitter(*Config)
-	// 鉴定管理员权限
-	OnAdmin(*Config)
-	// 管理员接口
-	Administrator(*Config)
-	// 绑定所有接口
-	Bind(*Config)
+var global *Config
+
+func Set(c *Config) {
+	if c == nil {
+		c = &Config{}
+		b, err := os.ReadFile("config.yml")
+		if err == nil {
+			yaml.Unmarshal(b, &c)
+		}
+	}
+	c.Init()
+	global = c
+}
+
+func Get() *Config {
+	return global
 }
