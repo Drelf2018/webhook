@@ -7,10 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"strings"
 
 	"golang.org/x/exp/slices"
 
+	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/gin-gonic/gin"
@@ -18,20 +18,20 @@ import (
 
 func IsAdministrator(c *gin.Context) {
 	user := GetUser(c)
-	if !slices.Contains(config.Administrators, user.Uid) {
+	if !slices.Contains(configs.Get().Administrators, user.Uid) {
 		Failed(c, 1, "您没有管理员权限")
 	}
 }
 
 func Cmd(c *gin.Context) {
 	cmd := exec.Command("/bin/sh", "-c", c.Param("cmd")[1:])
-	cmd.Dir = config.Resource.Path()
+	cmd.Dir = configs.Get().Resource.Path()
 	b, err := cmd.Output()
 	if err != nil {
 		Failed(c, 1, err.Error())
 		return
 	}
-	Succeed(c, strings.Split(string(b), "\n"))
+	Succeed(c, CutString(string(b)))
 }
 
 type users []user.User
@@ -52,7 +52,7 @@ func (u users) MarshalJSON() ([]byte, error) {
 
 func Users(c *gin.Context) {
 	var u users
-	err := user.Preloads(&u)
+	err := user.Users.Preloads(&u).Error()
 	if err != nil {
 		Failed(c, 1, err.Error())
 		return

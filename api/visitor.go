@@ -1,12 +1,26 @@
 package api
 
 import (
+	"net/http"
+
+	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/Drelf2018/webhook/utils"
 	u20 "github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
 )
+
+func Cors(c *gin.Context) {
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+	c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Cache-Control, Content-Language, Content-Type")
+	c.Header("Access-Control-Allow-Credentials", "true")
+	// 禁止所有 OPTIONS 方法 原因见博文
+	if c.Request.Method == http.MethodOptions {
+		c.AbortWithStatus(http.StatusNoContent)
+	}
+}
 
 // 当前版本号
 func Version(c *gin.Context) {
@@ -15,7 +29,7 @@ func Version(c *gin.Context) {
 
 // 查看资源目录
 func List(c *gin.Context) {
-	Succeed(c, config.Resource)
+	Succeed(c, configs.Get().Resource)
 }
 
 // 解析图片网址并返回文件
@@ -26,8 +40,10 @@ func List(c *gin.Context) {
 //
 // 重定向至 https://www.ngui.cc/el/3757797.html?action=onClick
 func Fetch(c *gin.Context) {
-	c.Request.URL.Path = data.Save(c.Param("url")[1:])
-	config.Engine.HandleContext(c)
+	url := c.Param("url")[1:]
+	log.Infof("Fetching %v", url)
+	c.Request.URL.Path = data.Save(url)
+	configs.Get().Engine.HandleContext(c)
 }
 
 // 获取当前在线状态
@@ -67,7 +83,7 @@ func Register(c *gin.Context) {
 		return
 	}
 	user.Done(u.Uid)
-	if user.Update(&u, "uid = ?", u.Uid) {
+	if user.Users.First(&u, "uid = ?", u.Uid) {
 		// 已注册用户
 		Succeed(c, u.Token)
 	} else {
@@ -109,4 +125,14 @@ func GetComments(c *gin.Context) {
 		return
 	}
 	Succeed(c, p.Comments)
+}
+
+// 读取日志
+func ReadLog(c *gin.Context) {
+	s, err := user.LogFile.Read()
+	if err != nil {
+		Failed(c, 1, err.Error())
+		return
+	}
+	Succeed(c, CutString(s))
 }

@@ -1,27 +1,12 @@
 package api
 
 import (
-	"os"
+	"strings"
 
-	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/user"
+	"github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
-	"gopkg.in/yaml.v2"
 )
-
-var config *configs.Config
-
-func SetConfig(c *configs.Config) *configs.Config {
-	if c == nil {
-		c = &configs.Config{}
-		b, err := os.ReadFile("config.yml")
-		if err == nil {
-			yaml.Unmarshal(b, &c)
-		}
-	}
-	config = c.Init()
-	return config
-}
 
 // 返回成功数据
 func Succeed(c *gin.Context, data ...any) {
@@ -50,4 +35,13 @@ func Failed(c *gin.Context, code int, message string, data ...any) {
 // 读取用户
 func GetUser(c *gin.Context) *user.User {
 	return c.MustGet("user").(*user.User)
+}
+
+func CutString(s string) []string {
+	return utils.Filter(
+		strings.Split(s, "\n"),
+		func(s string) bool {
+			return s != ""
+		},
+	)
 }

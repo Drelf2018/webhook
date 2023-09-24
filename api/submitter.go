@@ -1,28 +1,52 @@
 package api
 
 import (
+	"strings"
+	"time"
+
+	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/Drelf2018/webhook/utils"
+	u20 "github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
 )
 
+var log = u20.SetTimestampFormat(time.DateTime)
+
 func IsSubmitter(c *gin.Context) {
+	// 从 headers 或者 query 获取身份码
 	token := c.GetHeader("Authorization")
-	if token == "" {
-		token = c.Query("Authorization")
-	}
+	token1, ok1 := c.GetQuery("Authorization")
+	token2, ok2 := c.GetQuery("authorization")
+	configs.SetZero(&token, token1, token2)
+
 	if token == "" {
 		Failed(c, 1, "你是不是调错接口了啊")
 		return
 	}
-	user := user.Query(token)
-	if user == nil {
+
+	u := user.Query(token)
+	if u == nil {
 		Failed(c, 2, "鉴权失败", "received", token)
 		return
 	}
-	utils.Timer(user.Uid)
-	c.Set("user", user)
+
+	utils.Timer(u.Uid)
+	c.Set("user", u)
+
+	// 清除 query 中的身份码
+	if ok1 || ok2 {
+		query := make([]string, 0)
+		for k, v := range c.Request.URL.Query() {
+			if k == "Authorization" || k == "authorization" {
+				continue
+			}
+			query = append(query, k+"="+strings.Join(v, "&"+k+"="))
+		}
+		c.Request.URL.RawQuery = strings.Join(query, "&")
+	}
+	log.Infof("%v %v \"%v\"", u, c.Request.Method, c.Request.URL)
 }
 
 func Ping(c *gin.Context) {
@@ -37,7 +61,7 @@ func Me(c *gin.Context) {
 
 // 主动更新主页
 func Update(c *gin.Context) {
-	err := config.UpdateIndex()
+	err := configs.Get().UpdateIndex()
 	if err != nil {
 		Failed(c, 1, err.Error())
 		return
