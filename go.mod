@@ -7,7 +7,7 @@ require (
 	github.com/Drelf2018/cmps v1.6.2-alpha.0
 	github.com/Drelf2018/request v0.4.2
 	github.com/Drelf2018/resource v0.3.5
-	github.com/Drelf2020/utils v0.6.1
+	github.com/Drelf2020/utils v0.7.0
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/gabriel-vasile/mimetype v1.4.2
