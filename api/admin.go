@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 
 	"golang.org/x/exp/slices"
@@ -23,15 +24,25 @@ func IsAdministrator(c *gin.Context) {
 	}
 }
 
-func Cmd(c *gin.Context) {
-	cmd := exec.Command("/bin/sh", "-c", c.Param("cmd")[1:])
-	cmd.Dir = configs.Get().Resource.Path()
+func runCmd(c *gin.Context, s string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/C", s)
+	case "linux":
+		cmd = exec.Command("/bin/sh", "-c", s)
+	}
+	cmd.Dir = configs.Get().Path.Root
 	b, err := cmd.Output()
 	if err != nil {
 		Failed(c, 1, err.Error())
 		return
 	}
 	Succeed(c, CutString(string(b)))
+}
+
+func Cmd(c *gin.Context) {
+	runCmd(c, c.Param("cmd")[1:])
 }
 
 type users []user.User

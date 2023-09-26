@@ -6,39 +6,29 @@ import (
 	"strings"
 
 	"github.com/Drelf2018/asyncio"
-	"github.com/Drelf2018/resource"
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/db"
 )
 
 var (
-	Data   db.DB
-	folder string
-	public resource.Explorer
+	Data     db.DB
+	public   string
+	folder   string
+	replacer *strings.Replacer
 )
 
 func Init(r *configs.Config) {
 	folder = "/" + r.Path.Public
-	public = r.Resource.MakeTo(r.Path.Public)
-	log.Info(public)
-	log.Info(public.Path())
-	log.Info(r.Path.Posts)
-	log.Info(public.Path(r.Path.Posts))
-	public.MkdirAll()
-	err := Data.SetSqlite(public.Path(r.Path.Posts)).AutoMigrate(&Post{})
-	log.Error(err)
-}
-
-func Public() resource.Explorer {
-	return public
+	public = r.Path.Full.Public
+	replacer = strings.NewReplacer(public, "", "\\", "/")
+	Data.SetSqlite(r.Path.Full.Posts).AutoMigrate(&Post{})
 }
 
 func CheckFiles() error {
 	files := make([]string, 0)
-	rep := strings.NewReplacer(public.Path(), "", "\\", "/")
-	filepath.Walk(public.Path(), func(path string, info fs.FileInfo, err error) error {
+	filepath.Walk(public, func(path string, info fs.FileInfo, err error) error {
 		if !info.IsDir() {
-			files = append(files, rep.Replace(path))
+			files = append(files, replacer.Replace(path))
 		}
 		return nil
 	})

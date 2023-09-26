@@ -2,6 +2,7 @@ package configs
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/Drelf2018/resource"
 	"github.com/Drelf2020/utils"
@@ -37,6 +38,17 @@ type Path struct {
 	Public string `yaml:"public"`
 	Posts  string `yaml:"posts"`
 	Users  string `yaml:"users"`
+	Log    string `yaml:"log"`
+	Full   struct {
+		Views  string
+		Public string
+		Posts  string
+		Users  string
+		Log    string
+
+		Index   string
+		Version string
+	} `yaml:"-"`
 }
 
 func (p *Path) Init() {
@@ -45,6 +57,18 @@ func (p *Path) Init() {
 	SetZero(&p.Public, "public")
 	SetZero(&p.Posts, "posts.db")
 	SetZero(&p.Users, "users.db")
+	SetZero(&p.Log, ".log")
+
+	p.Full.Views = filepath.Join(p.Root, p.Views)
+	p.Full.Public = filepath.Join(p.Root, p.Public)
+	p.Full.Posts = filepath.Join(p.Root, p.Public, p.Posts)
+	p.Full.Users = filepath.Join(p.Root, p.Users)
+	p.Full.Log = filepath.Join(p.Root, p.Log)
+	p.Full.Index = filepath.Join(p.Full.Views, "index.html")
+	p.Full.Version = filepath.Join(p.Full.Views, ".version")
+
+	os.MkdirAll(p.Full.Views, os.ModePerm)
+	os.MkdirAll(p.Full.Public, os.ModePerm)
 }
 
 // webhook 配置
@@ -57,8 +81,6 @@ type Config struct {
 	Port uint16 `yaml:"port"`
 	// 动态
 	Oid string `yaml:"oid"`
-	// 资源文件管理器
-	Resource resource.Explorer
 	// 资源文件夹路径
 	Path Path `yaml:"path"`
 	// Github 主页
@@ -75,39 +97,29 @@ func (r *Config) Init() {
 	SetZero(&r.Oid, "643451139714449427")
 	SetNil[gin.Engine](&r.Engine, gin.Default())
 	SetNil[string](&r.Administrators, []string{})
-	if r.Resource == nil {
-		r.Resource = new(resource.Resource).Init(r.Path.Root).Root
-	}
 }
 
 // 更新主页
 func (r *Config) UpdateIndex() (err error) {
 	// 先获取最新版本
-	views := r.Resource.MakeTo(r.Path.Views)
-	views.MkdirAll()
-
+	os.MkdirAll(r.Path.Full.Views, os.ModePerm)
 	err = r.Github.GetLatestCommit()
 	if err != nil {
 		return
 	}
-
-	if views.Find("index.html") != nil {
-		if ver := views.Find(".version"); ver != nil {
-			if ver.MustRead() == r.Github.Commit.Sha {
-				return nil
-			}
+	ver := resource.File{Name: r.Path.Full.Version}
+	if utils.FileExist(r.Path.Full.Index) {
+		s, err := ver.Read()
+		if err == nil && s == r.Github.Commit.Sha {
+			return nil
 		}
 	}
-
 	// 再决定要不要克隆
-	folder := views.Path()
-	views.RemoveAll()
-	err = r.Github.Clone(folder)
+	os.RemoveAll(r.Path.Full.Views)
+	err = r.Github.Clone(r.Path.Full.Views)
 	if err != nil {
 		return
 	}
-
-	ver, _ := r.Resource.MakeTo(r.Path.Views).Touch(".version", 0)
 	return ver.Write(r.Github.Commit.Sha)
 }
 

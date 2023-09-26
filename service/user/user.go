@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Drelf2018/resource"
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/db"
 	"github.com/Drelf2020/utils"
@@ -14,26 +13,14 @@ import (
 )
 
 // 全局数据库
-var (
-	Users   db.DB
-	LogFile *resource.File
-)
+var Users db.DB
 
 func Init(r *configs.Config) {
-	r.Resource.MkdirAll()
-	Users.SetSqlite(r.Resource.Path(r.Path.Users))
+	utils.SetOutputFile(r.Path.Full.Log)
+	Users.SetSqlite(r.Path.Full.Users)
 	Users.AutoMigrate(&Job{})
 	Users.AutoMigrate(&User{})
 	SetApi(r.Oid)
-
-	LogFile = r.Resource.Find(".log")
-	if LogFile == nil {
-		var ok bool
-		if LogFile, ok = r.Resource.Touch(".log", 0); !ok {
-			panic("create .log error")
-		}
-	}
-	utils.SetOutputFile(LogFile.Path())
 }
 
 // 监听列表获取错误

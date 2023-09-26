@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -61,7 +62,10 @@ func (a *Attachment) Save() {
 }
 
 func (a *Attachment) Store(data []byte) {
-	os.WriteFile(public.Path(a.Path()), data, os.ModePerm)
+	dir, _ := filepath.Split(a.Path())
+	dir = filepath.Join(public, dir)
+	os.MkdirAll(dir, os.ModePerm)
+	os.WriteFile(filepath.Join(public, a.Path()), data, os.ModePerm)
 }
 
 // 下载附件

@@ -81,13 +81,13 @@ func (c Cycle) OnCors(r *configs.Config) {
 }
 
 func (c Cycle) OnStatic(r *configs.Config) {
-	index := r.Resource.Path(r.Path.Views)
+	index := r.Path.Full.Views
 	// 主页绑定
 	r.Use(static.ServeRoot("/", index))
 	// 子页面
 	r.Use(static.ServeRoot("/user", index))
 	// 静态资源绑定
-	r.Static(r.Path.Public, data.Public().Path())
+	r.Static(r.Path.Public, r.Path.Full.Public)
 }
 
 func (c Cycle) Visitor(r *configs.Config) {

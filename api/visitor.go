@@ -2,7 +2,9 @@ package api
 
 import (
 	"net/http"
+	"runtime"
 
+	"github.com/Drelf2018/resource"
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
@@ -29,7 +31,12 @@ func Version(c *gin.Context) {
 
 // 查看资源目录
 func List(c *gin.Context) {
-	Succeed(c, configs.Get().Resource)
+	switch runtime.GOOS {
+	case "windows":
+		runCmd(c, "dir /s /b")
+	case "linux":
+		runCmd(c, "du -ah")
+	}
 }
 
 // 解析图片网址并返回文件
@@ -127,7 +134,8 @@ func GetComments(c *gin.Context) {
 
 // 读取日志
 func ReadLog(c *gin.Context) {
-	s, err := user.LogFile.Read()
+	log := resource.File{Name: configs.Get().Path.Full.Log}
+	s, err := log.Read()
 	if err != nil {
 		Failed(c, 1, err.Error())
 		return
