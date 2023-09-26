@@ -3,7 +3,8 @@ package configs
 import (
 	"os"
 	"path/filepath"
-	"slices"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
