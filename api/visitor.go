@@ -40,9 +40,7 @@ func List(c *gin.Context) {
 //
 // 重定向至 https://www.ngui.cc/el/3757797.html?action=onClick
 func Fetch(c *gin.Context) {
-	url := c.Param("url")[1:]
-	log.Infof("Fetching %v", url)
-	c.Request.URL.Path = data.Save(url)
+	c.Request.URL.Path = data.Save(c.Param("url")[1:])
 	configs.Get().Engine.HandleContext(c)
 }
 

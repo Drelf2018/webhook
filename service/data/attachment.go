@@ -21,7 +21,7 @@ var log = utils.GetLog()
 type Attachment struct {
 	db.Model
 	// 原网址
-	Url string `form:"url" gorm:"unique" cmps:"1"`
+	Url string `form:"url" gorm:"unique;not null" cmps:"1"`
 	// 本地路径
 	Local string
 	// 同浏览器 MIME type 附件的媒体类型
@@ -70,6 +70,9 @@ func (a *Attachment) Store(data []byte) {
 
 // 下载附件
 func (a *Attachment) Download() error {
+	if a.Url == "" {
+		return nil
+	}
 	result := request.Get(a.Url)
 	if result.Error != nil {
 		log.Errorf("Download %v error: %v", a, result.Error)
@@ -81,8 +84,7 @@ func (a *Attachment) Download() error {
 		asyncio.C(func() { a.MIME = mimetype.Detect(result.Content).String() }),
 		asyncio.C(a.Store, result.Content),
 	)
-	log.Infof("Uploading %v", a)
-	if err := Data.Save(a).Error; err != nil {
+	if err := Data.DB.Updates(a).Error; err != nil {
 		log.Errorf("Update %v error: %v", a, err)
 		return err
 	}
@@ -92,7 +94,7 @@ func (a *Attachment) Download() error {
 func Save(url string) string {
 	a := &Attachment{Url: url}
 	log.Infof("Saving %v", a)
-	asyncio.RetryError(10, 5, a.Download)
+	Data.FirstOrCreate(nil, func() { asyncio.RetryError(-1, 5, a.Download) }, a, "url = ?", url)
 	return folder + a.Path()
 }
 
