@@ -37,11 +37,10 @@ func GetUser(c *gin.Context) *user.User {
 	return c.MustGet("user").(*user.User)
 }
 
-func CutString(s string) []string {
+// 换行分割字符串
+func CutString(s []byte) []string {
 	return utils.Filter(
-		strings.Split(s, "\n"),
-		func(s string) bool {
-			return s != ""
-		},
+		strings.Split(string(s), "\n"),
+		func(s string) bool { return s != "" },
 	)
 }

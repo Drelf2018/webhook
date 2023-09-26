@@ -2,9 +2,9 @@ package api
 
 import (
 	"net/http"
+	"os"
 	"runtime"
 
-	"github.com/Drelf2018/resource"
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
@@ -26,7 +26,7 @@ func Cors(c *gin.Context) {
 
 // 当前版本号
 func Version(c *gin.Context) {
-	Succeed(c, "v0.7.0")
+	Succeed(c, "v0.8.0")
 }
 
 // 查看资源目录
@@ -64,7 +64,7 @@ func GetToken(c *gin.Context) {
 		return
 	}
 	auth, token := user.GetRandomToken(uid)
-	Succeed(c, "auth", auth, "token", token)
+	Succeed(c, "auth", auth, "token", token, "oid", configs.Get().Oid)
 }
 
 // 新建用户
@@ -134,11 +134,10 @@ func GetComments(c *gin.Context) {
 
 // 读取日志
 func ReadLog(c *gin.Context) {
-	log := resource.File{Name: configs.Get().Path.Full.Log}
-	s, err := log.Read()
+	b, err := os.ReadFile(configs.Get().Path.Full.Log)
 	if err != nil {
 		Failed(c, 1, err.Error())
 		return
 	}
-	Succeed(c, CutString(s))
+	Succeed(c, CutString(b))
 }

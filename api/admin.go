@@ -38,7 +38,7 @@ func runCmd(c *gin.Context, s string) {
 		Failed(c, 1, err.Error())
 		return
 	}
-	Succeed(c, CutString(string(b)))
+	Succeed(c, CutString(b))
 }
 
 func Cmd(c *gin.Context) {

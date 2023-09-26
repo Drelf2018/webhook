@@ -3,8 +3,8 @@ package configs
 import (
 	"os"
 	"path/filepath"
+	"slices"
 
-	"github.com/Drelf2018/resource"
 	"github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v2"
@@ -74,7 +74,7 @@ func (p *Path) Init() {
 // webhook 配置
 type Config struct {
 	// 引擎
-	*gin.Engine
+	*gin.Engine `yaml:"-"`
 	// 测试
 	Debug bool `yaml:"debug"`
 	// 端口 0~65535
@@ -95,6 +95,8 @@ func (r *Config) Init() {
 	r.Github.Init()
 	SetZero(&r.Port, 9000)
 	SetZero(&r.Oid, "643451139714449427")
+	// 设置模式
+	gin.SetMode(utils.Ternary(r.Debug, gin.DebugMode, gin.ReleaseMode))
 	SetNil[gin.Engine](&r.Engine, gin.Default())
 	SetNil[string](&r.Administrators, []string{})
 }
@@ -107,10 +109,9 @@ func (r *Config) UpdateIndex() (err error) {
 	if err != nil {
 		return
 	}
-	ver := resource.File{Name: r.Path.Full.Version}
 	if utils.FileExist(r.Path.Full.Index) {
-		s, err := ver.Read()
-		if err == nil && s == r.Github.Commit.Sha {
+		b, err := os.ReadFile(r.Path.Full.Version)
+		if err == nil && slices.Equal(b, r.Github.Sha) {
 			return nil
 		}
 	}
@@ -120,7 +121,7 @@ func (r *Config) UpdateIndex() (err error) {
 	if err != nil {
 		return
 	}
-	return ver.Write(r.Github.Commit.Sha)
+	return os.WriteFile(r.Path.Full.Version, r.Github.Sha, os.ModePerm)
 }
 
 var global *Config
@@ -135,6 +136,12 @@ func Set(c *Config) {
 	}
 	c.Init()
 	global = c
+	if !utils.FileExist("config.yml") {
+		b, err := yaml.Marshal(c)
+		if err == nil {
+			os.WriteFile("config.yml", b, os.ModePerm)
+		}
+	}
 }
 
 func Get() *Config {

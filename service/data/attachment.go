@@ -93,7 +93,6 @@ func (a *Attachment) Download() error {
 
 func Save(url string) string {
 	a := &Attachment{Url: url}
-	log.Infof("Saving %v", a)
 	Data.FirstOrCreate(nil, func() { asyncio.RetryError(-1, 5, a.Download) }, a, "url = ?", url)
 	return folder + a.Path()
 }

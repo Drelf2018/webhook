@@ -13,9 +13,11 @@ type Github struct {
 	Username   string `yaml:"username"`
 	Repository string `yaml:"repository"`
 	Branche    string `yaml:"branche"`
-	Commit     struct {
+
+	Sha    []byte `yaml:"-"`
+	Commit struct {
 		Sha string `json:"sha"`
-	} `json:"commit"`
+	} `json:"commit" yaml:"-"`
 }
 
 func (g *Github) Init() {
@@ -34,6 +36,7 @@ func (g *Github) GIT() string {
 
 // 获取最新提交
 func (g *Github) GetLatestCommit() error {
+	defer func() { g.Sha = []byte(g.Commit.Sha) }()
 	return request.Get(g.API()).Json(g)
 }
 

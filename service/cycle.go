@@ -10,9 +10,7 @@ import (
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
-	u20 "github.com/Drelf2020/utils"
 	"github.com/gin-contrib/static"
-	"github.com/gin-gonic/gin"
 	"gorm.io/gorm/clause"
 )
 
@@ -171,8 +169,6 @@ func (c Cycle) Administrator(r *configs.Config) {
 }
 
 func (c Cycle) Bind(r *configs.Config) {
-	// 设置模式
-	gin.SetMode(u20.Ternary(r.Debug, gin.DebugMode, gin.ReleaseMode))
 	// 初始化
 	c.OnCreate(r)
 	// 跨域设置
