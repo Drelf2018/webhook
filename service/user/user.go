@@ -20,6 +20,7 @@ var (
 )
 
 func Init(r *configs.Config) {
+	r.Resource.MkdirAll()
 	Users.SetSqlite(r.Resource.Path(r.Path.Users))
 	Users.AutoMigrate(&Job{})
 	Users.AutoMigrate(&User{})

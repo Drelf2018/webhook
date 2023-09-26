@@ -20,8 +20,13 @@ var (
 func Init(r *configs.Config) {
 	folder = "/" + r.Path.Public
 	public = r.Resource.MakeTo(r.Path.Public)
+	log.Info(public)
+	log.Info(public.Path())
+	log.Info(r.Path.Posts)
+	log.Info(public.Path(r.Path.Posts))
 	public.MkdirAll()
-	Data.SetSqlite(public.Path(r.Path.Posts)).AutoMigrate(&Post{})
+	err := Data.SetSqlite(public.Path(r.Path.Posts)).AutoMigrate(&Post{})
+	log.Error(err)
 }
 
 func Public() resource.Explorer {

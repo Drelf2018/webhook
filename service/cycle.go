@@ -40,10 +40,10 @@ type LifeCycle interface {
 type Cycle int
 
 func (c Cycle) OnCreate(r *configs.Config) {
-	// 资源数据库初始化
-	data.Init(r)
 	// 用户数据库初始化
 	user.Init(r)
+	// 资源数据库初始化
+	data.Init(r)
 	// 初始化测试用户
 	if r.Debug {
 		user.Users.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&user.User{
