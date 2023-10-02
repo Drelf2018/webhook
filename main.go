@@ -11,15 +11,12 @@ type (
 	Path   = configs.Path
 )
 
-// 使用默认生命周期循环
-var cycle service.LifeCycle = service.Cycle(114514)
-
-func SetLifeCycle(c service.LifeCycle) {
-	cycle = c
+// 使用自定义 LifeCycle 启动
+func RunWithCycle(c *configs.Config, cycle service.LifeCycle) {
+	cycle.Bind(configs.Set(c))
 }
 
 // 启动！
 func Run(c *configs.Config) {
-	configs.Set(c)
-	cycle.Bind(configs.Get())
+	RunWithCycle(c, service.Cycle(114514))
 }

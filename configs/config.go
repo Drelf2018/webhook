@@ -2,28 +2,12 @@ package configs
 
 import (
 	"os"
-	"path/filepath"
 
-	"golang.org/x/exp/slices"
-
+	"github.com/Drelf2018/initial"
 	"github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v2"
 )
-
-// 设置值类型对象默认值
-func SetZero[T comparable](a *T, b ...T) {
-	var zero T
-	if *a == zero {
-		for _, c := range b {
-			if c == zero {
-				continue
-			}
-			*a = c
-			break
-		}
-	}
-}
 
 // 设置引用类型对象默认值
 func SetNil[C any, T utils.CanNil[C]](a *T, b T) {
@@ -34,40 +18,19 @@ func SetNil[C any, T utils.CanNil[C]](a *T, b T) {
 
 // 资源文件夹路径
 type Path struct {
-	Root   string `yaml:"root"`
-	Views  string `yaml:"views"`
-	Public string `yaml:"public"`
-	Posts  string `yaml:"posts"`
-	Users  string `yaml:"users"`
-	Log    string `yaml:"log"`
-	Full   struct {
-		Views  string
-		Public string
-		Posts  string
-		Users  string
-		Log    string
+	Root    string `yaml:"root" default:"resource"`
+	Views   string `yaml:"views" default:"views" abs:"Root"`
+	Public  string `yaml:"public" default:"public" abs:"Root"`
+	Posts   string `yaml:"posts" default:"posts.db" abs:"Public"`
+	Users   string `yaml:"users" default:"users.db" abs:"Root"`
+	Log     string `yaml:"log" default:".log" abs:"Root"`
+	Index   string `yaml:"index" default:"index.html" abs:"Views"`
+	Version string `yaml:"version" default:".version" abs:"Views"`
 
-		Index   string
-		Version string
-	} `yaml:"-"`
+	Full *Path `yaml:"-" default:"initial.Abs"`
 }
 
-func (p *Path) Init() {
-	SetZero(&p.Root, "resource")
-	SetZero(&p.Views, "views")
-	SetZero(&p.Public, "public")
-	SetZero(&p.Posts, "posts.db")
-	SetZero(&p.Users, "users.db")
-	SetZero(&p.Log, ".log")
-
-	p.Full.Views = filepath.Join(p.Root, p.Views)
-	p.Full.Public = filepath.Join(p.Root, p.Public)
-	p.Full.Posts = filepath.Join(p.Root, p.Public, p.Posts)
-	p.Full.Users = filepath.Join(p.Root, p.Users)
-	p.Full.Log = filepath.Join(p.Root, p.Log)
-	p.Full.Index = filepath.Join(p.Full.Views, "index.html")
-	p.Full.Version = filepath.Join(p.Full.Views, ".version")
-
+func (p *Path) MkdirAll(_ *Config) {
 	os.MkdirAll(p.Full.Views, os.ModePerm)
 	os.MkdirAll(p.Full.Public, os.ModePerm)
 }
@@ -79,55 +42,33 @@ type Config struct {
 	// 测试
 	Debug bool `yaml:"debug"`
 	// 端口 0~65535
-	Port uint16 `yaml:"port"`
+	Port int64 `yaml:"port" default:"9000"`
 	// 动态
-	Oid string `yaml:"oid"`
+	Oid string `yaml:"oid" default:"643451139714449427"`
 	// 资源文件夹路径
-	Path Path `yaml:"path"`
+	Path Path `yaml:"path" default:"initial.Default;MkdirAll"`
 	// Github 主页
-	Github Github `yaml:"github"`
+	Github Github `yaml:"github" default:"initial.Default"`
 	// 管理员
 	Administrators []string `yaml:"administrators"`
 }
 
 // 自动填充
-func (r *Config) Init() {
-	r.Path.Init()
-	r.Github.Init()
-	SetZero(&r.Port, 9000)
-	SetZero(&r.Oid, "643451139714449427")
+func (c *Config) Init() {
 	// 设置模式
-	gin.SetMode(utils.Ternary(r.Debug, gin.DebugMode, gin.ReleaseMode))
-	SetNil[gin.Engine](&r.Engine, gin.Default())
-	SetNil[string](&r.Administrators, []string{})
+	gin.SetMode(utils.Ternary(c.Debug, gin.DebugMode, gin.ReleaseMode))
+	SetNil[gin.Engine](&c.Engine, gin.Default())
+	initial.Default(c)
 }
 
 // 更新主页
-func (r *Config) UpdateIndex() (err error) {
-	// 先获取最新版本
-	os.MkdirAll(r.Path.Full.Views, os.ModePerm)
-	err = r.Github.GetLatestCommit()
-	if err != nil {
-		return
-	}
-	if utils.FileExist(r.Path.Full.Index) {
-		b, err := os.ReadFile(r.Path.Full.Version)
-		if err == nil && slices.Equal(b, r.Github.Sha) {
-			return nil
-		}
-	}
-	// 再决定要不要克隆
-	os.RemoveAll(r.Path.Full.Views)
-	err = r.Github.Clone(r.Path.Full.Views)
-	if err != nil {
-		return
-	}
-	return os.WriteFile(r.Path.Full.Version, r.Github.Sha, os.ModePerm)
+func (c *Config) UpdateIndex() error {
+	return c.Github.UpdateIndex(c.Path.Full.Views, c.Path.Full.Index, c.Path.Full.Version)
 }
 
 var global *Config
 
-func Set(c *Config) {
+func Set(c *Config) *Config {
 	if c == nil {
 		c = &Config{}
 		b, err := os.ReadFile("config.yml")
@@ -136,13 +77,13 @@ func Set(c *Config) {
 		}
 	}
 	c.Init()
-	global = c
-	if !utils.FileExist("config.yml") {
-		b, err := yaml.Marshal(c)
-		if err == nil {
-			os.WriteFile("config.yml", b, os.ModePerm)
-		}
+
+	b, err := yaml.Marshal(c)
+	if err == nil {
+		os.WriteFile("config.yml", b, os.ModePerm)
 	}
+	global = c
+	return global
 }
 
 func Get() *Config {

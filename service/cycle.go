@@ -85,7 +85,7 @@ func (c Cycle) OnStatic(r *configs.Config) {
 	// 子页面
 	r.Use(static.ServeRoot("/user", index))
 	// 静态资源绑定
-	r.Static(r.Path.Public, r.Path.Full.Public)
+	r.Static("/"+r.Path.Public, r.Path.Full.Public)
 }
 
 func (c Cycle) Visitor(r *configs.Config) {

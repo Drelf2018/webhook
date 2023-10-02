@@ -32,6 +32,18 @@ func Failed(c *gin.Context, code int, message string, data ...any) {
 	c.AbortWithStatusJSON(200, obj)
 }
 
+// 根据是否有错误判断返回
+func Final(c *gin.Context, code int, err error, failed []any, succeed ...any) {
+	if err != nil {
+		if failed == nil {
+			failed = make([]any, 0)
+		}
+		Failed(c, code, err.Error(), failed...)
+		return
+	}
+	Succeed(c, succeed...)
+}
+
 // 读取用户
 func GetUser(c *gin.Context) *user.User {
 	return c.MustGet("user").(*user.User)

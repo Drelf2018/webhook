@@ -13,12 +13,26 @@ import (
 
 var log = u20.SetTimestampFormat("2006-01-02 15:04:05")
 
+// 设置值类型对象默认值
+func SetZero[T comparable](a *T, b ...T) {
+	var zero T
+	if *a == zero {
+		for _, c := range b {
+			if c == zero {
+				continue
+			}
+			*a = c
+			break
+		}
+	}
+}
+
 func IsSubmitter(c *gin.Context) {
 	// 从 headers 或者 query 获取身份码
 	token := c.GetHeader("Authorization")
 	token1, ok1 := c.GetQuery("Authorization")
 	token2, ok2 := c.GetQuery("authorization")
-	configs.SetZero(&token, token1, token2)
+	SetZero(&token, token1, token2)
 
 	if token == "" {
 		Failed(c, 1, "你是不是调错接口了啊")
@@ -60,24 +74,15 @@ func Me(c *gin.Context) {
 
 // 主动更新主页
 func Update(c *gin.Context) {
-	err := configs.Get().UpdateIndex()
-	if err != nil {
-		Failed(c, 1, err.Error())
-		return
-	}
-	Succeed(c)
+	cfg := configs.Get()
+	Final(c, 1, cfg.UpdateIndex(), nil, cfg.Github.Commit.Sha)
 }
 
 // 更新监听列表
 func ModifyListening(c *gin.Context) {
 	u := GetUser(c)
 	u.Listening = c.QueryArray("listen")
-	err := u.Update()
-	if err != nil {
-		Failed(c, 1, err.Error(), "received", u.Listening)
-		return
-	}
-	Succeed(c, u.Listening)
+	Final(c, 1, u.Update(), []any{"received", u.Listening}, u.Listening)
 }
 
 // 新增任务
@@ -90,24 +95,14 @@ func AddJob(c *gin.Context) {
 	}
 	u := GetUser(c)
 	u.Jobs = append(u.Jobs, job)
-	err = u.Update()
-	if err != nil {
-		Failed(c, 2, err.Error(), "received", u.Jobs)
-		return
-	}
-	Succeed(c, u.Jobs)
+	Final(c, 2, u.Update(), []any{"received", u.Jobs}, u.Jobs)
 }
 
 // 移除任务
 func RemoveJobs(c *gin.Context) {
 	ids := c.QueryArray("jobs")
 	u := GetUser(c)
-	err := u.RemoveJobs(ids)
-	if err != nil {
-		Failed(c, 1, err.Error(), "received", u.Jobs)
-		return
-	}
-	Succeed(c, u.Jobs)
+	Final(c, 1, u.RemoveJobs(ids), []any{"received", u.Jobs}, u.Jobs)
 }
 
 // 提交博文

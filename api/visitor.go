@@ -31,12 +31,9 @@ func Version(c *gin.Context) {
 
 // 查看资源目录
 func List(c *gin.Context) {
-	switch runtime.GOOS {
-	case "windows":
-		runCmd(c, "dir /s /b")
-	case "linux":
-		runCmd(c, "du -ah")
-	}
+	cmd := u20.Ternary(runtime.GOOS == "windows", "dir /s /b", "du -ah")
+	s, err := shell(cmd)
+	Final(c, 1, err, nil, s)
 }
 
 // 解析图片网址并返回文件
@@ -135,9 +132,5 @@ func GetComments(c *gin.Context) {
 // 读取日志
 func ReadLog(c *gin.Context) {
 	b, err := os.ReadFile(configs.Get().Path.Full.Log)
-	if err != nil {
-		Failed(c, 1, err.Error())
-		return
-	}
-	Succeed(c, CutString(b))
+	Final(c, 1, err, nil, CutString(b))
 }

@@ -24,7 +24,7 @@ func IsAdministrator(c *gin.Context) {
 	}
 }
 
-func runCmd(c *gin.Context, s string) {
+func shell(s string) ([]string, error) {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
@@ -35,14 +35,14 @@ func runCmd(c *gin.Context, s string) {
 	cmd.Dir = configs.Get().Path.Root
 	b, err := cmd.Output()
 	if err != nil {
-		Failed(c, 1, err.Error())
-		return
+		return nil, err
 	}
-	Succeed(c, CutString(b))
+	return CutString(b), nil
 }
 
 func Cmd(c *gin.Context) {
-	runCmd(c, c.Param("cmd")[1:])
+	s, err := shell(c.Param("cmd")[1:])
+	Final(c, 1, err, nil, s)
 }
 
 type users []user.User
@@ -64,11 +64,7 @@ func (u users) MarshalJSON() ([]byte, error) {
 func Users(c *gin.Context) {
 	var u users
 	err := user.Users.Preloads(&u).Error()
-	if err != nil {
-		Failed(c, 1, err.Error())
-		return
-	}
-	Succeed(c, u)
+	Final(c, 1, err, nil, u)
 }
 
 func UpdatePermission(c *gin.Context) {
@@ -79,11 +75,7 @@ func UpdatePermission(c *gin.Context) {
 		return
 	}
 	err = user.User{Uid: uid, Permission: p}.UpdatePermission()
-	if err != nil {
-		Failed(c, 2, err.Error(), "received", uid)
-		return
-	}
-	Succeed(c)
+	Final(c, 2, err, []any{"received", uid})
 }
 
 func Close(c *gin.Context) {
@@ -91,10 +83,5 @@ func Close(c *gin.Context) {
 }
 
 func CheckFiles(c *gin.Context) {
-	err := data.CheckFiles()
-	if err != nil {
-		Failed(c, 1, err.Error())
-		return
-	}
-	Succeed(c)
+	Final(c, 1, data.CheckFiles(), nil, "检查中")
 }
