@@ -1,29 +1,3 @@
-<p align="center">
-  <a href="https://github.com/Drelf2018/webhook/">
-    <img src="https://user-images.githubusercontent.com/41439182/220989932-10aeb2f4-9526-4ec5-9991-b5960041be1f.png" height="200" alt="webhook">
-  </a>
-</p>
-
-<div align="center">
-
-# webhook
-
-_✨ 你说得对，但是 `webhook` 是基于 [weibo-webhook](https://github.com/Drelf2018/weibo-webhook) 改良的分布式博文收集终端 ✨_  
-
-
-</div>
-
-<p align="center">
-  <a href="/">文档</a>
-  ·
-  <a href="https://github.com/Drelf2018/webhook/releases/">下载</a>
-</p>
-
-## 使用
-
-下面是一个简易的提交脚本 ～(∠・ω< )
-
-```python
 import asyncio
 import json
 from typing import Any, Tuple, Union
@@ -154,4 +128,3 @@ async def main():
 
 
 asyncio.run(main())
-```
