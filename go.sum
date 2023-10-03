@@ -6,8 +6,8 @@ github.com/Drelf2018/asyncio v0.11.1-alpha.1 h1:9QtYUDo6IPXscmYjmmRgaIpmwruRrb8o
 github.com/Drelf2018/asyncio v0.11.1-alpha.1/go.mod h1:RporDU76PSRb+LmRv8oQI1s52/+YrbQG/FgFHzA36Uk=
 github.com/Drelf2018/cmps v1.6.2-alpha.0 h1:+AdUfrIPLwAPkyks8UaU4wVSVRgHuIw2oiBdx3vaf/w=
 github.com/Drelf2018/cmps v1.6.2-alpha.0/go.mod h1:Eu4i6RdqBHlGMkfybJbfnlsU8tIJNgitYn4j5rG/U6A=
-github.com/Drelf2018/initial v0.2.0 h1:qCEuksKfOGSJM9ofrzXANIZfLrlCz7gT+zwboS+cf9U=
-github.com/Drelf2018/initial v0.2.0/go.mod h1:7+mwqttoZvwLTnI2MHfF2GymHPrUOxa0riCJ3Al/T1M=
+github.com/Drelf2018/initial v0.2.1 h1:EXXt65Yvy6cq5SPKSbjJg1ShqH/+P7X52H/SwpVoNpI=
+github.com/Drelf2018/initial v0.2.1/go.mod h1:7+mwqttoZvwLTnI2MHfF2GymHPrUOxa0riCJ3Al/T1M=
 github.com/Drelf2018/request v0.4.2 h1:j3XQNfqZaB3MQis/ZFBHX/gYA480Hgol36RJWJfxk0g=
 github.com/Drelf2018/request v0.4.2/go.mod h1:sTW6hoCKJvPR2ldHv4ptc/O9cAfw4Et7LXr1QN8JrZU=
 github.com/Drelf2020/utils v0.7.0 h1:bSapT0t5IoNyWpa83+fTpiROfp88AAenyPvAaP/Wo/0=
