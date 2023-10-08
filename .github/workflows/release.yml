@@ -13,7 +13,7 @@ jobs:
         goarch: [amd64, arm64] # 需要打包的架构
     steps:
       - name: Export version
-        run: setenv webhook ${{ github.ref_name }}
+        run: export webhook=${{ github.ref_name }}
       - name: install
         run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
       - name: generate
