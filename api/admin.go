@@ -24,7 +24,7 @@ func IsAdministrator(c *gin.Context) {
 	}
 }
 
-func shell(s string) ([]string, error) {
+func Shell(s string, dir ...string) ([]string, error) {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
@@ -32,7 +32,11 @@ func shell(s string) ([]string, error) {
 	case "linux":
 		cmd = exec.Command("/bin/sh", "-c", s)
 	}
-	cmd.Dir = configs.Get().Path.Root
+	if len(dir) >= 1 {
+		cmd.Dir = dir[0]
+	} else {
+		cmd.Dir = configs.Get().Path.Root
+	}
 	b, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -41,7 +45,7 @@ func shell(s string) ([]string, error) {
 }
 
 func Cmd(c *gin.Context) {
-	s, err := shell(c.Param("cmd")[1:])
+	s, err := Shell(c.Param("cmd")[1:])
 	Final(c, 1, err, nil, s)
 }
 

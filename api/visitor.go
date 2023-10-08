@@ -32,7 +32,7 @@ func Version(c *gin.Context) {
 // 查看资源目录
 func List(c *gin.Context) {
 	cmd := u20.Ternary(runtime.GOOS == "windows", "dir /s /b", "du -ah")
-	s, err := shell(cmd)
+	s, err := Shell(cmd)
 	Final(c, 1, err, nil, s)
 }
 
