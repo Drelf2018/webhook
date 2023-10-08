@@ -1,3 +1,3 @@
 go test
 go generate
-go build
+go build $1 $2
