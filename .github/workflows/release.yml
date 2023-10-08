@@ -12,10 +12,12 @@ jobs:
         goos: [linux, windows] # 需要打包的系统
         goarch: [amd64, arm64] # 需要打包的架构
     steps:
-      - name: Export version
-        run: export webhook=${{ github.ref_name }}
       - name: Install
         run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+      - name: Generate
+        run: |
+          go run cmd/generate/main.go -webhook=${{ github.ref_name }}
+          goversioninfo -o=cmd/build/resource.syso
       - uses: actions/checkout@v3
       - uses: wangyoucao577/go-release-action@v1
         with:
