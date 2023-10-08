@@ -12,13 +12,13 @@ jobs:
         goos: [linux, windows] # 需要打包的系统
         goarch: [amd64, arm64] # 需要打包的架构
     steps:
+      - uses: actions/checkout@v3
       - name: Install
         run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
       - name: Generate
         run: |
           go run cmd/generate/main.go -webhook=${{ github.ref_name }}
           goversioninfo -o=cmd/build/resource.syso
-      - uses: actions/checkout@v3
       - uses: wangyoucao577/go-release-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }} # 一个默认的变量，用来实现往 Release 中添加文件
