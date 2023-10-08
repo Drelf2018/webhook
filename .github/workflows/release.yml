@@ -17,7 +17,9 @@ jobs:
         run: go run cmd/generate/main.go -webhook=${{ github.ref_name }}
       - name: Generate
         run: |
+          go env
           go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+          export PATH=$PATH:/home/runner/go/bin
           go generate
         working-directory: cmd/build
       - uses: wangyoucao577/go-release-action@v1
