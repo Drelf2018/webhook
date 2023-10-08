@@ -59,6 +59,10 @@ func TestGenerate(t *testing.T) {
 		}
 	}
 	b, _ := json.MarshalIndent(versioninfo, "", "\t")
+	t.Log("json: ", string(b))
+	t.Log("version:", ver)
 	os.WriteFile("cmd/build/versioninfo.json", b, os.ModePerm)
-	api.Shell("go generate", "cmd/build")
+	s, err := api.Shell("go generate", "./cmd/build")
+	t.Log("cmd:", s)
+	t.Log("err:", err)
 }
