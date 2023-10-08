@@ -76,8 +76,7 @@ func Register(c *gin.Context) {
 		return
 	}
 	matched, err := u.MatchReplies()
-	if err != nil {
-		Failed(c, 2, err.Error())
+	if Error(c, 2, err) {
 		return
 	}
 	if !matched {

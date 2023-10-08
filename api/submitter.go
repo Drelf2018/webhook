@@ -3,6 +3,7 @@ package api
 import (
 	"strings"
 
+	"github.com/Drelf2018/initial"
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
@@ -88,9 +89,7 @@ func ModifyListening(c *gin.Context) {
 // 新增任务
 func AddJob(c *gin.Context) {
 	job := user.Job{}
-	err := c.Bind(&job)
-	if err != nil {
-		Failed(c, 1, err.Error(), "received", job)
+	if Error(c, 1, c.Bind(&job), "received", job) {
 		return
 	}
 	u := GetUser(c)
@@ -115,11 +114,11 @@ func Submit(c *gin.Context) {
 	// 初始化 post
 	post := data.Post{Submitter: GetUser(c)}
 	// 绑定其他数据
-	err := c.Bind(&post)
-	if err != nil {
-		Failed(c, 2, err.Error(), "received", post)
+	if Error(c, 2, c.Bind(&post), "received", post) {
 		return
 	}
+	// 依赖注入
+	initial.Default(&post)
 	// 不允许提交已储存的博文刷积分
 	if data.HasPost(post.Platform, post.Mid) {
 		Failed(c, 3, "该博文已被提交过", "received", post)

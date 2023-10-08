@@ -70,8 +70,7 @@ func Users(c *gin.Context) {
 func UpdatePermission(c *gin.Context) {
 	uid, permission := c.Param("uid"), c.Param("permission")
 	p, err := strconv.ParseFloat(permission, 64)
-	if err != nil {
-		Failed(c, 1, err.Error(), "received", permission)
+	if Error(c, 1, err, "received", permission) {
 		return
 	}
 	err = user.User{Uid: uid, Permission: p}.UpdatePermission()
