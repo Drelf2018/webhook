@@ -20,7 +20,7 @@ jobs:
         run: |
           go test
           go generate
-        working-directory: cmd/build
+        working-directory: ../cmd/build
       - uses: actions/checkout@v3
       - uses: wangyoucao577/go-release-action@v1
         with:
