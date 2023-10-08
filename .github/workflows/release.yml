@@ -18,6 +18,7 @@ jobs:
         run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
       - name: generate
         run: |
+          ls
           cd ./cmd/build
           go test
           go generate
