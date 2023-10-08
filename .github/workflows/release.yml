@@ -14,17 +14,13 @@ jobs:
     steps:
       - name: Export version
         run: export webhook=${{ github.ref_name }}
-      - name: install
+      - name: Install
         run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
-      - name: LS
-        run: ls
-      - name: du
-        run: du -ah
-      - name: generate
+      - name: Generate
         run: |
           go test
           go generate
-        working-directory: ./cmd/build
+        working-directory: cmd/build
       - uses: actions/checkout@v3
       - uses: wangyoucao577/go-release-action@v1
         with:
