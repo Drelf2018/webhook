@@ -10,14 +10,13 @@ jobs:
     strategy:
       matrix:
         goos: [linux, windows] # 需要打包的系统
-        goarch: [amd64, arm64] # 需要打包的架构
+        goarch: [amd64] # 需要打包的架构
     steps:
       - uses: actions/checkout@v3
       - name: Export
         run: go run cmd/generate/main.go -webhook=${{ github.ref_name }}
       - name: Generate
         run: |
-          go env
           go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
           export PATH=$PATH:/home/runner/go/bin
           go generate
