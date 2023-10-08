@@ -54,7 +54,7 @@ func (a *Attachment) Path() string {
 	return a.Local
 }
 
-func (a *Attachment) Save() {
+func (a *Attachment) Save(_ any) {
 	if a.Url == "" {
 		return
 	}

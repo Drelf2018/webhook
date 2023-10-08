@@ -9,7 +9,6 @@ import (
 	"github.com/Drelf2018/webhook/service/db"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/Drelf2018/webhook/utils"
-	"gorm.io/gorm"
 )
 
 // 博文或评论
@@ -29,15 +28,15 @@ type Post struct {
 	Source string `form:"source" json:"source"`
 	// 博主
 	BloggerID string  `form:"-" json:"-" gorm:"column:blogger"`
-	Blogger   Blogger `form:"blogger" json:"blogger" preload:""`
+	Blogger   Blogger `form:"blogger" json:"blogger" preload:"" default:"SetPlatform;initial.Default"`
 	// 回复
 	RepostID *uint64 `form:"-" json:"-" gorm:"column:repost"`
-	Repost   *Post   `form:"repost" json:"repost"`
+	Repost   *Post   `form:"repost" json:"repost" binding:"omitempty" default:"SetRepost;initial.Default"`
 	// 评论
 	CommentID *uint64 `form:"-" json:"-" gorm:"column:comment"`
-	Comments  []Post  `form:"comments" json:"comments" gorm:"foreignKey:CommentID"`
+	Comments  []Post  `form:"comments" json:"comments" gorm:"foreignKey:CommentID" default:"range.SetSubmitter;range.initial.Default"`
 	// 附件
-	Attachments Attachments `form:"attachments" json:"attachments" gorm:"many2many:post_attachments;"`
+	Attachments Attachments `form:"attachments" json:"attachments" gorm:"many2many:post_attachments;" default:"range.Save"`
 	// 提交者
 	Submitter *user.User `form:"-" json:"submitter"`
 	// 编辑距离
@@ -46,21 +45,17 @@ type Post struct {
 	Replacer *strings.Replacer `gorm:"-" form:"-" json:"-"`
 }
 
-func (p *Post) BeforeCreate(tx *gorm.DB) error {
-	p.Blogger.Face.Save()
-	p.Blogger.Pendant.Save()
-	for i, l := 0, len(p.Attachments); i < l; i++ {
-		p.Attachments[i].Save()
+func (p *Post) SetSubmitter(parent *Post) {
+	p.Submitter = parent.Submitter
+}
+
+func (p *Post) SetRepost(parent *Post) bool {
+	if reflect.DeepEqual(p, &Post{}) {
+		parent.Repost = nil
+		return true
 	}
-	if reflect.DeepEqual(p.Repost, &Post{}) {
-		p.Repost = nil
-	} else {
-		p.Repost.Submitter = p.Submitter
-	}
-	asyncio.ForEachP(p.Comments, func(c *Post) {
-		c.Submitter = p.Submitter
-	})
-	return nil
+	p.SetSubmitter(parent)
+	return false
 }
 
 func (p *Post) Type() string {
@@ -69,8 +64,8 @@ func (p *Post) Type() string {
 
 func (p Post) String() string {
 	return fmt.Sprintf(
-		"Post(id=%v, platform=%v, text=%v, blogger=%v, repost=%v, comments=%v, attachments=%v)",
-		p.ID, p.Platform, p.Text, p.Blogger, p.Repost, p.Comments, p.Attachments,
+		"Post(id=%v, platform=%v, text=%v, blogger=%v, comments=%v, attachments=%v, \n  repost=%v)",
+		p.ID, p.Platform, p.Text, p.Blogger, p.Comments, p.Attachments, p.Repost,
 	)
 }
 

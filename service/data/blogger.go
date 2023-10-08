@@ -12,17 +12,17 @@ type Blogger struct {
 	db.Model
 	Platform    string `form:"platform" json:"platform"`
 	Uid         string `form:"uid" json:"uid" cmps:"1"`
-	Create      string `form:"create" json:"create"`
 	Name        string `form:"name" json:"name"`
-	Description string `form:"description" json:"description"`
+	Create      string `form:"create" json:"create"`
 	Follower    string `form:"follower" json:"follower"`
 	Following   string `form:"following" json:"following"`
+	Description string `form:"description" json:"description"`
 
 	FaceID int64      `gorm:"column:face" json:"-"`
-	Face   Attachment `form:"face" json:"face" preload:"1"`
+	Face   Attachment `form:"face" json:"face" preload:"1" default:"Save"`
 
 	PendantID int64      `gorm:"column:pendant" json:"-"`
-	Pendant   Attachment `form:"pendant" json:"pendant" preload:"2"`
+	Pendant   Attachment `form:"pendant" json:"pendant" preload:"2" default:"Save"`
 }
 
 func (b Blogger) String() string {
@@ -33,4 +33,8 @@ func (b Blogger) String() string {
 func (b *Blogger) Query(now time.Time) *Blogger {
 	Data.DB.Last(b, "`create` <= ?", now)
 	return b
+}
+
+func (b *Blogger) SetPlatform(p *Post) {
+	p.Platform = b.Platform
 }

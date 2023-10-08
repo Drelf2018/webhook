@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Drelf2018/asyncio v0.11.1-alpha.1
 	github.com/Drelf2018/cmps v1.6.2-alpha.0
-	github.com/Drelf2018/initial v0.2.1
+	github.com/Drelf2018/initial v0.4.1
 	github.com/Drelf2018/request v0.4.2
 	github.com/Drelf2020/utils v0.7.0
 	github.com/PuerkitoBio/goquery v1.8.1
