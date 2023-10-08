@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, windows] # 需要打包的系统
+        goos: [windows] # 需要打包的系统
         goarch: [amd64] # 需要打包的架构
     steps:
       - uses: actions/checkout@v3
