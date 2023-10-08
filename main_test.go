@@ -2,6 +2,7 @@ package webhook_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -59,10 +60,10 @@ func TestGenerate(t *testing.T) {
 		}
 	}
 	b, _ := json.MarshalIndent(versioninfo, "", "\t")
-	t.Log("json: ", string(b))
-	t.Log("version:", ver)
+	fmt.Printf("json: %v\n", string(b))
+	fmt.Printf("version: %v\n", ver)
 	os.WriteFile("cmd/build/versioninfo.json", b, os.ModePerm)
 	s, err := api.Shell("go generate", "./cmd/build")
-	t.Log("cmd:", s)
-	t.Log("err:", err)
+	fmt.Printf("cmd: %v\n", s)
+	fmt.Printf("err: %v\n", err)
 }
