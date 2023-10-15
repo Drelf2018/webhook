@@ -14,6 +14,7 @@ import (
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
+	"github.com/Drelf2018/webhook/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -82,7 +83,20 @@ func UpdatePermission(c *gin.Context) {
 }
 
 func Close(c *gin.Context) {
-	os.Exit(0)
+	data.Data.Close()
+	user.Users.Close()
+	utils.Delay(5, os.Exit, 0)
+	Succeed(c, "人生有梦，各自精彩！")
+}
+
+func Clear(c *gin.Context) {
+	Close(c)
+	os.RemoveAll(configs.Get().Path.Full.Public)
+}
+
+func Reboot(c *gin.Context) {
+	Close(c)
+	os.RemoveAll(configs.Get().Path.Root)
 }
 
 func CheckFiles(c *gin.Context) {

@@ -164,6 +164,12 @@ func (c Cycle) Administrator(r *configs.Config) {
 	// 结束进程
 	r.GET("/close", api.Close)
 
+	// 删除资源
+	r.GET("/clear", api.Clear)
+
+	// 删库重启
+	r.GET("/reboot", api.Reboot)
+
 	// 检查资源
 	r.GET("/files", api.CheckFiles)
 }
