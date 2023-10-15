@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Drelf2018/asyncio"
+	"github.com/Drelf2018/initial"
 	"github.com/Drelf2018/webhook/service/db"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/Drelf2018/webhook/utils"
@@ -49,13 +50,13 @@ func (p *Post) SetSubmitter(parent *Post) {
 	p.Submitter = parent.Submitter
 }
 
-func (p *Post) SetRepost(parent *Post) bool {
+func (p *Post) SetRepost(parent *Post) error {
 	if reflect.DeepEqual(p, &Post{}) {
 		parent.Repost = nil
-		return true
+		return initial.ErrBreak
 	}
 	p.SetSubmitter(parent)
-	return false
+	return nil
 }
 
 func (p *Post) Type() string {
