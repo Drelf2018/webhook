@@ -73,7 +73,7 @@ func (a *Attachment) Download() error {
 	if a.Url == "" {
 		return nil
 	}
-	result := request.Get(a.Url)
+	result := request.Get(a.Url, request.Referer("https://weibo.com/"))
 	if result.Error != nil {
 		log.Errorf("Download %v error: %v", a, result.Error)
 		return result.Error
