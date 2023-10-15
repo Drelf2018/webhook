@@ -24,6 +24,18 @@ type DB struct {
 	noCopy NoCopy
 }
 
+func (db *DB) Close() error {
+	if db.DB == nil {
+		return nil
+	}
+	defer func() { db.DB = nil }()
+	sqlDB, err := db.DB.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
+}
+
 func (db *DB) Error() error {
 	return db.err
 }
