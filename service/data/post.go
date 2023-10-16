@@ -105,7 +105,7 @@ func (p *Post) Webhook() {
 			}
 			job.Data[k] = v
 		}
-		asyncio.RetryError(3, 5, func() error { return job.Request().Error })
+		asyncio.RetryError(3, 5, job.Request().Error)
 	})
 }
 

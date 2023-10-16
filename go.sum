@@ -8,8 +8,8 @@ github.com/Drelf2018/cmps v1.6.2-alpha.0 h1:+AdUfrIPLwAPkyks8UaU4wVSVRgHuIw2oiBd
 github.com/Drelf2018/cmps v1.6.2-alpha.0/go.mod h1:Eu4i6RdqBHlGMkfybJbfnlsU8tIJNgitYn4j5rG/U6A=
 github.com/Drelf2018/initial v0.4.1 h1:57bjHL4iuN+laQH1AnEWp8owYFYwbcdo3QbuVATKK34=
 github.com/Drelf2018/initial v0.4.1/go.mod h1:7+mwqttoZvwLTnI2MHfF2GymHPrUOxa0riCJ3Al/T1M=
-github.com/Drelf2018/request v0.5.0 h1:7lBsonGKqTTs2qw/MqvZeKWqpnJs2U81xlngW/XAo58=
-github.com/Drelf2018/request v0.5.0/go.mod h1:+0TUFS1uV8Z47Tpe66Xwa8T2v12XEbYCPkv2ycrlfK8=
+github.com/Drelf2018/request v0.6.0 h1:GeovlBOzNze6gsCFxAvoGu0PEiIp+mKhYRwVnyr/USM=
+github.com/Drelf2018/request v0.6.0/go.mod h1:+0TUFS1uV8Z47Tpe66Xwa8T2v12XEbYCPkv2ycrlfK8=
 github.com/Drelf2020/utils v0.7.0 h1:bSapT0t5IoNyWpa83+fTpiROfp88AAenyPvAaP/Wo/0=
 github.com/Drelf2020/utils v0.7.0/go.mod h1:2D1aCXWdQ1ybsm97a95MQB9oUyrI3s55CV0Ji4xYZ8c=
 github.com/Microsoft/go-winio v0.5.2/go.mod h1:WpS1mjBmmwHBEWmogvA2mj8546UReBk4v8QkMxJ6pZY=

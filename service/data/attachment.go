@@ -61,11 +61,11 @@ func (a *Attachment) Save(_ any) {
 	Data.FirstOrCreate(nil, func() { go asyncio.RetryError(-1, 5, a.Download) }, a, "url = ?", a.Url)
 }
 
-func (a *Attachment) Store(data []byte) {
+func (a *Attachment) Store(r *request.Result) {
 	dir, _ := filepath.Split(a.Path())
 	dir = filepath.Join(public, dir)
 	os.MkdirAll(dir, os.ModePerm)
-	os.WriteFile(filepath.Join(public, a.Path()), data, os.ModePerm)
+	r.Write(filepath.Join(public, a.Path()), os.ModePerm)
 }
 
 // 下载附件
@@ -74,15 +74,15 @@ func (a *Attachment) Download() error {
 		return nil
 	}
 	result := request.Get(a.Url, request.Referer("https://weibo.com/"))
-	if result.Error != nil {
-		log.Errorf("Download %v error: %v", a, result.Error)
-		return result.Error
+	if result.Error() != nil {
+		log.Errorf("Download %v error: %v", a, result.Error())
+		return result.Error()
 	}
 	// 判断完类型并保存在本地后再存数据库
 	// 前两个操作都挺费时所以都协程了
 	asyncio.Wait(
 		asyncio.C(func() { a.MIME = mimetype.Detect(result.Content).String() }),
-		asyncio.C(a.Store, result.Content),
+		asyncio.C(a.Store, result),
 	)
 	if err := Data.DB.Updates(a).Error; err != nil {
 		log.Errorf("Update %v error: %v", a, err)
