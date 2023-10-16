@@ -80,7 +80,7 @@ func Query(token string) *User {
 		return nil
 	}
 	var u User
-	if !Users.First(&u, "token = ?", token) {
+	if Users.Preload(&u, "token = ?", token).NoRecord() {
 		return nil
 	}
 	return &u
