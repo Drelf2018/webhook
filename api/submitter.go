@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var log = u20.SetTimestampFormat("2006-01-02 15:04:05")
+var log = u20.Logger()
 
 // 设置值类型对象默认值
 func SetZero[T comparable](a *T, b ...T) {

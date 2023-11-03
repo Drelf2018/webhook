@@ -15,6 +15,7 @@ import (
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/Drelf2018/webhook/utils"
+	u20 "github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -83,6 +84,7 @@ func UpdatePermission(c *gin.Context) {
 }
 
 func Close(c *gin.Context) {
+	u20.CloseLogFile()
 	data.Data.Close()
 	user.Users.Close()
 	utils.Delay(5, os.Exit, 0)

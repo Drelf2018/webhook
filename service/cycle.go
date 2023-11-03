@@ -10,6 +10,7 @@ import (
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
+	"github.com/Drelf2020/utils"
 	"github.com/gin-contrib/static"
 	"gorm.io/gorm/clause"
 )
@@ -38,6 +39,9 @@ type LifeCycle interface {
 type Cycle int
 
 func (c Cycle) OnCreate(r *configs.Config) {
+	// 日志初始化
+	utils.SetOutputFile(r.Path.Full.Log)
+	utils.SetTimestampFormat("2006-01-02 15:04:05")
 	// 用户数据库初始化
 	user.Init(r)
 	// 资源数据库初始化

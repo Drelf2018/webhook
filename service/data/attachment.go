@@ -16,8 +16,6 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 )
 
-var log = utils.GetLog()
-
 // 附件
 type Attachment struct {
 	db.Model
@@ -74,8 +72,7 @@ func (a *Attachment) Download() error {
 		return nil
 	}
 	result := request.Get(a.Url, request.Referer("https://weibo.com/"))
-	if result.Error() != nil {
-		log.Errorf("Download %v error: %v", a, result.Error())
+	if utils.LogErr(result.Error()) {
 		return result.Error()
 	}
 	// 判断完类型并保存在本地后再存数据库
@@ -84,8 +81,7 @@ func (a *Attachment) Download() error {
 		asyncio.C(func() { a.MIME = mimetype.Detect(result.Content).String() }),
 		asyncio.C(a.Store, result),
 	)
-	if err := Data.DB.Updates(a).Error; err != nil {
-		log.Errorf("Update %v error: %v", a, err)
+	if err := Data.DB.Updates(a).Error; utils.LogErr(err) {
 		return err
 	}
 	return nil

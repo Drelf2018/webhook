@@ -16,7 +16,6 @@ import (
 var Users db.DB
 
 func Init(r *configs.Config) {
-	utils.SetOutputFile(r.Path.Full.Log)
 	Users.SetSqlite(r.Path.Full.Users)
 	Users.AutoMigrate(&Job{})
 	Users.AutoMigrate(&User{})
