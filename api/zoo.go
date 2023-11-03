@@ -33,11 +33,8 @@ func Failed(c *gin.Context, code int, message string, data ...any) {
 }
 
 // 根据是否有错误判断返回
-func Error(c *gin.Context, code int, err error, failed ...any) (hasError bool) {
+func Error(c *gin.Context, code int, err error, failed ...any) bool {
 	if err != nil {
-		if failed == nil {
-			failed = make([]any, 0)
-		}
 		Failed(c, code, err.Error(), failed...)
 		return true
 	}

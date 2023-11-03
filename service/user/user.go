@@ -40,11 +40,11 @@ func (l Listening) Value() (driver.Value, error) {
 
 // 用户
 type User struct {
-	Uid        string    `gorm:"primaryKey" json:"uid"`
-	Token      string    `json:"-"`
+	Uid        string    `json:"uid" gorm:"primaryKey"`
+	Token      string    `json:"token,omitempty"`
 	Permission float64   `json:"permission"`
-	Jobs       []Job     `gorm:"references:Uid" form:"jobs" json:"-"`
-	Listening  Listening `form:"listening" json:"-"`
+	Jobs       []Job     `json:"jobs,omitempty" gorm:"references:Uid"`
+	Listening  Listening `json:"listening,omitempty"`
 }
 
 func (u *User) String() string {
@@ -52,7 +52,7 @@ func (u *User) String() string {
 }
 
 func (u *User) RemoveJobs(jobs []string) error {
-	defer Users.First(u)
+	defer Users.Preload(u)
 	return Users.DB.Model(&Job{}).Where("user_uid = ? and id IN ?", u.Uid, jobs).Update("user_uid", nil).Error
 }
 
@@ -105,7 +105,7 @@ func (u *User) LevelUP() {
 }
 
 func (u *User) Scan(val any) error {
-	return Users.Base(u, "uid = ?", val).Error()
+	return Users.Select(u, []string{"uid", "permission"}, "uid = ?", val).Error()
 }
 
 func (u User) Value() (driver.Value, error) {

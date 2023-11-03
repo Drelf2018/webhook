@@ -1,9 +1,6 @@
 package api
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -51,26 +48,9 @@ func Cmd(c *gin.Context) {
 	Final(c, 1, err, nil, s)
 }
 
-type users []user.User
-
-func (u users) MarshalJSON() ([]byte, error) {
-	buf := bytes.NewBufferString("[")
-	for i, l := 0, len(u); i < l; i++ {
-		j, _ := json.Marshal(u[i].Jobs)
-		k, _ := u[i].Listening.Value()
-		buf.WriteString(fmt.Sprintf(
-			`{"uid":"%v","token":"%v","permission":"%v","jobs":%v,"listening":[%v]}`,
-			u[i].Uid, u[i].Token, u[i].Permission, string(j), k,
-		))
-	}
-	buf.WriteByte(']')
-	return json.RawMessage(buf.Bytes()), nil
-}
-
 func Users(c *gin.Context) {
-	var u users
-	err := user.Users.Preloads(&u).Error()
-	Final(c, 1, err, nil, u)
+	var u []user.User
+	Final(c, 1, user.Users.Preloads(&u).Error(), nil, u)
 }
 
 func UpdatePermission(c *gin.Context) {
@@ -80,7 +60,7 @@ func UpdatePermission(c *gin.Context) {
 		return
 	}
 	err = user.User{Uid: uid, Permission: p}.UpdatePermission()
-	Final(c, 2, err, []any{"received", uid})
+	Final(c, 2, err, []any{"received", uid}, "更新成功")
 }
 
 func Close(c *gin.Context) {

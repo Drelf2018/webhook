@@ -97,6 +97,11 @@ func (db *DB) Base(dest any, conds ...any) *DB {
 	return db
 }
 
+func (db *DB) Select(dest any, fields []string, conds ...any) *DB {
+	db.err = db.DB.Select(fields).First(dest, conds...).Error
+	return db
+}
+
 func (db *DB) First(x any, conds ...any) bool {
 	return !db.Base(x, conds...).NoRecord()
 }

@@ -94,14 +94,13 @@ func AddJob(c *gin.Context) {
 	}
 	u := GetUser(c)
 	u.Jobs = append(u.Jobs, job)
-	Final(c, 2, u.Update(), []any{"received", u.Jobs}, []any{u.Jobs}...)
+	Final(c, 2, u.Update(), []any{"received", u.Jobs}, u.Jobs)
 }
 
 // 移除任务
 func RemoveJobs(c *gin.Context) {
-	ids := c.QueryArray("jobs")
 	u := GetUser(c)
-	Final(c, 1, u.RemoveJobs(ids), []any{"received", u.Jobs}, []any{u.Jobs}...)
+	Final(c, 1, u.RemoveJobs(c.QueryArray("jobs")), []any{"received", u.Jobs}, u.Jobs)
 }
 
 // 提交博文
