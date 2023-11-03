@@ -3,11 +3,12 @@ module github.com/Drelf2018/webhook
 go 1.18
 
 require (
-	github.com/Drelf2018/asyncio v0.11.1-alpha.1
+	github.com/Drelf2018/TypeGo v0.5.1
+	github.com/Drelf2018/asyncio v0.12.1
 	github.com/Drelf2018/cmps v1.6.2-alpha.0
 	github.com/Drelf2018/initial v0.4.1
 	github.com/Drelf2018/request v0.6.0
-	github.com/Drelf2020/utils v0.7.0
+	github.com/Drelf2020/utils v0.8.0
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/gabriel-vasile/mimetype v1.4.2
@@ -23,7 +24,6 @@ require (
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
-	github.com/Drelf2018/TypeGo v0.3.1 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230717121422-5aa5874ade95 // indirect
 	github.com/acomagu/bufpipe v1.0.4 // indirect
