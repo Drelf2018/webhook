@@ -24,9 +24,11 @@ func Cors(c *gin.Context) {
 	}
 }
 
+const VERSION = "v0.11.4"
+
 // 当前版本号
 func Version(c *gin.Context) {
-	Succeed(c, "v0.11.2")
+	Succeed(c, VERSION)
 }
 
 // 查看资源目录
