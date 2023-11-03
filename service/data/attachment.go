@@ -59,6 +59,10 @@ func (a *Attachment) Save(_ any) {
 	Data.FirstOrCreate(nil, func() { go asyncio.RetryError(-1, 5, a.Download) }, a, "url = ?", a.Url)
 }
 
+func (a *Attachment) Detect(r *request.Result) {
+	a.MIME = mimetype.Detect(r.Content).String()
+}
+
 func (a *Attachment) Store(r *request.Result) {
 	dir, _ := filepath.Split(a.Path())
 	dir = filepath.Join(public, dir)
@@ -75,12 +79,9 @@ func (a *Attachment) Download() error {
 	if utils.LogErr(result.Error()) {
 		return result.Error()
 	}
-	// 判断完类型并保存在本地后再存数据库
 	// 前两个操作都挺费时所以都协程了
-	asyncio.Wait(
-		asyncio.C(func() { a.MIME = mimetype.Detect(result.Content).String() }),
-		asyncio.C(a.Store, result),
-	)
+	asyncio.ForFunc(result, a.Detect, a.Store)
+	// 判断完类型并保存在本地后再存数据库
 	if err := Data.DB.Updates(a).Error; utils.LogErr(err) {
 		return err
 	}

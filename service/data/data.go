@@ -37,6 +37,6 @@ func CheckFiles() error {
 	if err != nil {
 		return err
 	}
-	asyncio.ForEach(a, func(a Attachment) { asyncio.RetryError(3, 5, a.Download) })
+	asyncio.ForEachPtr(a, func(a *Attachment) { asyncio.RetryError(3, 5, a.Download) })
 	return nil
 }

@@ -10,8 +10,8 @@ import (
 
 func Delay(seconds float64, fn any, args ...any) {
 	go func() {
-		time.Sleep(time.Duration(seconds) * time.Second)
-		asyncio.C(fn, args...).Task().Run()
+		time.Sleep(time.Duration(1000*seconds) * time.Millisecond)
+		asyncio.CreateTask(fn, args...).Run()
 	}()
 }
 
