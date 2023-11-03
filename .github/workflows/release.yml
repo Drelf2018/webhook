@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Export
-        run: go run cmd/generate/main.go -webhook=${{ github.ref_name }}
+        run: go run cmd/generate/main.go
       - name: Generate
         run: |
           go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
