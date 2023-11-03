@@ -2,11 +2,45 @@ package db
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 
+	"github.com/Drelf2018/TypeGo/Reflect"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+var Ref = Reflect.New[[]string](func(self *Reflect.Reflect[[]string], field reflect.StructField, elem reflect.Type) []string {
+	if _, ok := elem.FieldByName(field.Name + "ID"); !ok {
+		return []string{}
+	}
+
+	preloads := make([][]string, 0)
+	if !self.GetType(field.Type, &preloads) {
+		return []string{}
+	}
+
+	r := make([]string, 0)
+	for _, preload := range preloads {
+		for _, s := range preload {
+			r = append(r, fmt.Sprintf("%v.%v", field.Name, s))
+		}
+	}
+
+	if len(r) == 0 {
+		return []string{field.Name}
+	}
+	return r
+}, func(r *Reflect.Reflect[[]string]) {
+	r.Alias = func(elem reflect.Type) []uintptr {
+		return []uintptr{
+			Reflect.Addr(elem),
+			Reflect.Addr(reflect.SliceOf(elem)),
+			Reflect.Addr(reflect.SliceOf(reflect.PtrTo(elem))),
+		}
+	}
+})
 
 type Model struct {
 	ID uint64 `gorm:"primaryKey;autoIncrement" form:"-" json:"-"`
@@ -86,8 +120,10 @@ func Exists[T any](db *DB, conds ...any) bool {
 
 func (db *DB) preloadDB(in any) *gorm.DB {
 	r := db.Model(in)
-	for _, s := range ParseStruct(in) {
-		r.Preload(s)
+	for _, preload := range Ref.Get(in) {
+		for _, s := range preload {
+			r.Preload(s)
+		}
 	}
 	return r.Preload(clause.Associations)
 }
@@ -99,5 +135,11 @@ func (db *DB) Preload(t any, conds ...any) *DB {
 
 func (db *DB) Preloads(t any, conds ...any) *DB {
 	db.err = db.preloadDB(t).Find(t, conds...).Error
+	return db
+}
+
+func (db *DB) AutoMigrate(dst ...any) *DB {
+	Ref.Init(dst...)
+	db.err = db.DB.AutoMigrate(dst...)
 	return db
 }

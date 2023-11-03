@@ -16,9 +16,7 @@ import (
 var Users db.DB
 
 func Init(r *configs.Config) {
-	Users.SetSqlite(r.Path.Full.Users)
-	Users.AutoMigrate(&Job{})
-	Users.AutoMigrate(&User{})
+	Users.SetSqlite(r.Path.Full.Users).AutoMigrate(&Job{}, &User{})
 	SetApi(r.Oid)
 }
 

@@ -1,8 +1,10 @@
 package db_test
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/db"
 	"gorm.io/gorm/clause"
 )
@@ -55,4 +57,9 @@ func TestDB(t *testing.T) {
 	if len(stus) != 4 {
 		t.Fatal(stus)
 	}
+}
+
+func TestRef(t *testing.T) {
+	db.Ref.Init(data.Post{})
+	fmt.Printf("db.Ref.Get(&[]data.Post{}): %v\n", db.Ref.Get(&[]*data.Post{}))
 }
