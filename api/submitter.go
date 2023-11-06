@@ -69,8 +69,7 @@ func Ping(c *gin.Context) {
 
 // 获取自身信息
 func Me(c *gin.Context) {
-	u := GetUser(c)
-	Succeed(c, "uid", u.Uid, "permission", u.Permission, "listening", u.Listening, "jobs", u.Jobs)
+	Succeed(c, c.MustGet("user"))
 }
 
 // 主动更新主页
@@ -101,6 +100,14 @@ func AddJob(c *gin.Context) {
 func RemoveJobs(c *gin.Context) {
 	u := GetUser(c)
 	Final(c, 1, u.RemoveJobs(c.QueryArray("jobs")), []any{"received", u.Jobs}, u.Jobs)
+}
+
+// 测试任务
+func TestJobs(c *gin.Context) {
+	jobs := user.GetJobsByID(GetUser(c).Uid, c.QueryArray("jobs")...)
+	r := make([]gin.H, 0)
+	data.DefaultPost.Send(jobs, &r)
+	Succeed(c, r)
 }
 
 // 提交博文

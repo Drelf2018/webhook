@@ -35,7 +35,11 @@ func (g *Github) Sha() []byte {
 
 // 获取最新提交
 func (g *Github) GetLatestCommit() error {
-	return request.Get(g.API()).Json(g)
+	result := request.Get(g.API())
+	if result.Error() != nil {
+		return result.Error()
+	}
+	return result.Json(g)
 }
 
 // 克隆到文件夹

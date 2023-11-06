@@ -10,6 +10,7 @@ import (
 	"github.com/Drelf2018/webhook/service/db"
 	"github.com/Drelf2020/utils"
 	uuid "github.com/satori/go.uuid"
+	"golang.org/x/exp/slices"
 )
 
 // 全局数据库
@@ -66,6 +67,9 @@ func Make(uid string) *User {
 		Uid:        uid,
 		Token:      uuid.NewV4().String(),
 		Permission: 5.10,
+	}
+	if slices.Contains(configs.Get().Administrators, uid) {
+		u.Permission = 1.0
 	}
 	Users.DB.Create(&u)
 	return &u

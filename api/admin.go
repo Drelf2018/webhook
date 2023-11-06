@@ -17,8 +17,7 @@ import (
 )
 
 func IsAdministrator(c *gin.Context) {
-	user := GetUser(c)
-	if !slices.Contains(configs.Get().Administrators, user.Uid) {
+	if !slices.Contains(configs.Get().Administrators, GetUser(c).Uid) {
 		Failed(c, 1, "您没有管理员权限")
 	}
 }
@@ -65,7 +64,7 @@ func UpdatePermission(c *gin.Context) {
 
 func Close(c *gin.Context) {
 	u20.CloseLogFile()
-	data.Data.Close()
+	data.Posts.Close()
 	user.Users.Close()
 	utils.Delay(5, os.Exit, 0)
 	Succeed(c, "人生有梦，各自精彩！")

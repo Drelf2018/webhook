@@ -54,7 +54,7 @@ func (c Cycle) OnCreate(r *configs.Config) {
 			Permission: 1,
 			Jobs: []user.Job{
 				{
-					Patten: "bilibili434334701",
+					Pattern: "bilibili434334701",
 					Job: request.Job{
 						Method: http.MethodPost,
 						Url:    "https://postman-echo.com/post",
@@ -146,6 +146,9 @@ func (c Cycle) Submitter(r *configs.Config) {
 
 	// 移除任务
 	r.GET("/remove", api.RemoveJobs)
+
+	// 测试任务
+	r.GET("/test", api.TestJobs)
 
 	// 提交博文
 	r.POST("/submit", api.Submit)

@@ -19,10 +19,10 @@ type Blogger struct {
 	Description string `form:"description" json:"description"`
 
 	FaceID int64      `gorm:"column:face" json:"-"`
-	Face   Attachment `form:"face" json:"face" preload:"1" default:"Save"`
+	Face   Attachment `form:"face" json:"face" default:"Save"`
 
 	PendantID int64      `gorm:"column:pendant" json:"-"`
-	Pendant   Attachment `form:"pendant" json:"pendant" preload:"2" default:"Save"`
+	Pendant   Attachment `form:"pendant" json:"pendant" default:"Save"`
 }
 
 func (b Blogger) String() string {
@@ -31,7 +31,7 @@ func (b Blogger) String() string {
 
 // 查询某一时刻前最近的用户状态
 func (b *Blogger) Query(now time.Time) *Blogger {
-	Data.DB.Last(b, "`create` <= ?", now)
+	Posts.DB.Last(b, "`create` <= ?", now)
 	return b
 }
 

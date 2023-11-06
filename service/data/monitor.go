@@ -8,6 +8,8 @@ import (
 	"github.com/agnivade/levenshtein"
 )
 
+var monitors = make(map[string]*Monitor)
+
 // 博文检查器
 type Monitor struct {
 	Score float64
@@ -39,13 +41,12 @@ func (m *Monitor) Parse(post *Post) {
 	}
 	// 找到相似度最高的
 	cmps.Slice(m.Posts)
-	SavePost(m.Posts[0])
-	SavePosts(m.Posts[1:]...)
+	asyncio.ForEach(m.Posts, func(p *Post) { p.Submitter.LevelUP() })
+	Posts.DB.Create(&m.Posts)
+	m.Posts[0].Webhook()
 	// 所有版本都存完就可以删除该检查器了
 	delete(monitors, post.Type())
 }
-
-var monitors = make(map[string]*Monitor)
 
 // 获取检查器
 func GetMonitor(typ string) *Monitor {

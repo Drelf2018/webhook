@@ -11,17 +11,17 @@ import (
 )
 
 var (
-	Data     db.DB
+	Posts    db.DB
 	public   string
 	folder   string
 	replacer *strings.Replacer
 )
 
 func Init(r *configs.Config) {
-	folder = "/" + r.Path.Public
 	public = r.Path.Full.Public
+	folder = "/" + r.Path.Public
 	replacer = strings.NewReplacer(public, "", "\\", "/")
-	Data.SetSqlite(r.Path.Full.Posts).AutoMigrate(&Post{})
+	Posts.SetSqlite(r.Path.Full.Posts).AutoMigrate(&Post{})
 }
 
 func CheckFiles() error {
@@ -33,7 +33,7 @@ func CheckFiles() error {
 		return nil
 	})
 	var a Attachments
-	err := Data.DB.Not("local IN ?", files).Find(&a).Error
+	err := Posts.DB.Not("local IN ?", files).Find(&a).Error
 	if err != nil {
 		return err
 	}

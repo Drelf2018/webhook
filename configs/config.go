@@ -57,7 +57,9 @@ type Config struct {
 func (c *Config) Init() {
 	// 设置模式
 	gin.SetMode(utils.Ternary(c.Debug, gin.DebugMode, gin.ReleaseMode))
-	SetNil[gin.Engine](&c.Engine, gin.Default())
+	if c.Engine == nil {
+		c.Engine = gin.Default()
+	}
 	initial.Default(c)
 }
 

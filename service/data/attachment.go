@@ -56,7 +56,7 @@ func (a *Attachment) Save(_ any) {
 	if a.Url == "" {
 		return
 	}
-	Data.FirstOrCreate(nil, func() { go asyncio.RetryError(-1, 5, a.Download) }, a, "url = ?", a.Url)
+	Posts.FirstOrCreate(nil, func() { go asyncio.RetryError(-1, 5, a.Download) }, a, "url = ?", a.Url)
 }
 
 func (a *Attachment) Detect(r *request.Result) {
@@ -82,7 +82,7 @@ func (a *Attachment) Download() error {
 	// 前两个操作都挺费时所以都协程了
 	asyncio.ForFunc(result, a.Detect, a.Store)
 	// 判断完类型并保存在本地后再存数据库
-	if err := Data.DB.Updates(a).Error; utils.LogErr(err) {
+	if err := Posts.DB.Updates(a).Error; utils.LogErr(err) {
 		return err
 	}
 	return nil
@@ -90,7 +90,7 @@ func (a *Attachment) Download() error {
 
 func Save(url string) string {
 	a := &Attachment{Url: url}
-	Data.FirstOrCreate(nil, func() { asyncio.RetryError(-1, 5, a.Download) }, a, "url = ?", url)
+	Posts.FirstOrCreate(nil, func() { asyncio.RetryError(-1, 5, a.Download) }, a, "url = ?", url)
 	return folder + a.Path()
 }
 

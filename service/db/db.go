@@ -9,6 +9,8 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+
+	"github.com/Drelf2020/utils"
 )
 
 var Ref = Reflect.New[[]string](func(self *Reflect.Reflect[[]string], field reflect.StructField, elem reflect.Type) []string {
@@ -80,8 +82,7 @@ func (db *DB) SetDB(r *gorm.DB) *DB {
 }
 
 func (db *DB) SetDialector(dialector gorm.Dialector) *DB {
-	gdb, _ := gorm.Open(dialector, &gorm.Config{})
-	return db.SetDB(gdb)
+	return db.SetDB(utils.Panic(gorm.Open(dialector, &gorm.Config{})))
 }
 
 func (db *DB) SetSqlite(file string) *DB {
@@ -119,14 +120,10 @@ func (db *DB) FirstOrCreate(first, create func(), x any, conds ...any) {
 	}
 }
 
-func Exists[T any](db *DB, conds ...any) bool {
-	return db.First(new(T), conds...)
-}
-
-func (db *DB) preloadDB(in any) *gorm.DB {
+func (db *DB) preload(in any) *gorm.DB {
 	r := db.Model(in)
-	for _, preload := range Ref.Get(in) {
-		for _, s := range preload {
+	for _, v := range Ref.Get(in) {
+		for _, s := range v {
 			r.Preload(s)
 		}
 	}
@@ -134,12 +131,12 @@ func (db *DB) preloadDB(in any) *gorm.DB {
 }
 
 func (db *DB) Preload(t any, conds ...any) *DB {
-	db.err = db.preloadDB(t).First(t, conds...).Error
+	db.err = db.preload(t).First(t, conds...).Error
 	return db
 }
 
 func (db *DB) Preloads(t any, conds ...any) *DB {
-	db.err = db.preloadDB(t).Find(t, conds...).Error
+	db.err = db.preload(t).Find(t, conds...).Error
 	return db
 }
 

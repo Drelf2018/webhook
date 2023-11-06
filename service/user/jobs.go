@@ -12,19 +12,25 @@ type Job struct {
 	// 数据库内序号
 	ID      int64  `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserUid string `json:"-"`
-	Patten  string `form:"patten" json:"patten" yaml:"patten"`
+	Pattern string `form:"pattern" json:"pattern" yaml:"pattern"`
 	request.Job
 }
 
 // 匹配
-func (j Job) Match(s string) bool {
-	matched, err := regexp.MatchString(j.Patten, s)
+func (job Job) Match(s string) bool {
+	matched, err := regexp.MatchString(job.Pattern, s)
 	return err == nil && matched
 }
 
 // 正则匹配任务
 func GetJobsByRegexp(platform, uid string) []Job {
-	var temp []Job
-	Users.DB.Where("patten LIKE ?", platform+"%").Find(&temp)
-	return utils.Filter(temp, func(j Job) bool { return j.Match(platform + uid) })
+	var jobs []Job
+	Users.Find(&jobs, "pattern LIKE ?", platform+"%")
+	return utils.Filter(jobs, func(job Job) bool { return job.Match(platform + uid) })
+}
+
+// 获取指定序号任务
+func GetJobsByID(uid string, id ...string) (jobs []Job) {
+	Users.Find(&jobs, "user_uid = ? and id IN ?", uid, id)
+	return
 }
