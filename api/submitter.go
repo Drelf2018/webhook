@@ -145,12 +145,5 @@ func Submit(c *gin.Context) {
 		return
 	}
 	// 检查该用户是否已提交过
-	m := data.GetMonitor(post.Type())
-	if m.IsSubmitted(post.Submitter.Uid) {
-		Failed(c, 4, "您已提交过", "received", post)
-		return
-	}
-	// 分析去了
-	go m.Parse(&post)
-	Succeed(c, "提交成功")
+	Final(c, 4, post.Parse(), []any{"received", post}, "提交成功")
 }

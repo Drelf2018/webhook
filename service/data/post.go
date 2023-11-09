@@ -2,6 +2,7 @@ package data
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -15,6 +16,8 @@ import (
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/itchyny/timefmt-go"
 )
+
+var ErrSubmitted = errors.New("您已提交过")
 
 // 博文或评论
 type Post struct {
@@ -63,6 +66,16 @@ func (p *Post) SetRepost(parent *Post) error {
 
 func (p *Post) Type() string {
 	return p.Platform + p.Mid
+}
+
+func (p *Post) Parse() error {
+	v, _ := monitors.LoadOrStore(p.Type(), &Monitor{Posts: make([]*Post, 0)})
+	m := v.(*Monitor)
+	if m.IsSubmitted(p.Submitter.Uid) {
+		return ErrSubmitted
+	}
+	go m.Parse(p)
+	return nil
 }
 
 func (p *Post) String() string {

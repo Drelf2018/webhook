@@ -1,6 +1,8 @@
 package data
 
 import (
+	"sync"
+
 	"golang.org/x/exp/slices"
 
 	"github.com/Drelf2018/asyncio"
@@ -8,10 +10,13 @@ import (
 	"github.com/agnivade/levenshtein"
 )
 
-var monitors = make(map[string]*Monitor)
+var monitors = sync.Map{}
+
+// var monitors = make(map[string]*Monitor)
 
 // 博文检查器
 type Monitor struct {
+	sync.Mutex
 	Score float64
 	Posts []*Post
 }
@@ -23,6 +28,8 @@ func (m *Monitor) IsSubmitted(uid string) bool {
 
 // 解析接收到的博文
 func (m *Monitor) Parse(post *Post) {
+	m.Lock()
+	defer m.Unlock()
 	// 说明已经在处理了
 	if m.Score >= 1 {
 		return
@@ -45,15 +52,5 @@ func (m *Monitor) Parse(post *Post) {
 	Posts.DB.Create(&m.Posts)
 	m.Posts[0].Webhook()
 	// 所有版本都存完就可以删除该检查器了
-	delete(monitors, post.Type())
-}
-
-// 获取检查器
-func GetMonitor(typ string) *Monitor {
-	m, ok := monitors[typ]
-	if !ok {
-		m = &Monitor{Posts: make([]*Post, 0)}
-		monitors[typ] = m
-	}
-	return m
+	monitors.Delete(post.Type())
 }
