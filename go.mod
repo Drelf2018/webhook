@@ -4,10 +4,10 @@ go 1.18
 
 require (
 	github.com/Drelf2018/TypeGo v0.5.1
-	github.com/Drelf2018/asyncio v0.12.1
+	github.com/Drelf2018/asyncio v0.13.0
 	github.com/Drelf2018/cmps v1.6.2-alpha.0
-	github.com/Drelf2018/initial v0.4.1
-	github.com/Drelf2018/request v0.6.0
+	github.com/Drelf2018/initial v0.6.0
+	github.com/Drelf2018/request v0.8.0
 	github.com/Drelf2020/utils v0.8.0
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/agnivade/levenshtein v1.1.1
@@ -44,6 +44,7 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/itchyny/timefmt-go v0.1.5 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect

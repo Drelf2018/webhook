@@ -26,7 +26,10 @@ type Blogger struct {
 }
 
 func (b Blogger) String() string {
-	return fmt.Sprintf("Blogger(id=%v, platform=%v, uid=%v, name=%v, face=%v, pendant=%v)", b.ID, b.Platform, b.Uid, b.Name, b.Face, b.Pendant)
+	return fmt.Sprintf(
+		"Blogger(id=%v, platform=%v, uid=%v, name=%v, face=%v, pendant=%v)",
+		b.ID, b.Platform, b.Uid, b.Name, b.Face, b.Pendant,
+	)
 }
 
 // 查询某一时刻前最近的用户状态

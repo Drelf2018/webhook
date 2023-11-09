@@ -17,7 +17,7 @@ type Job struct {
 }
 
 // 匹配
-func (job Job) Match(s string) bool {
+func (job *Job) Match(s string) bool {
 	matched, err := regexp.MatchString(job.Pattern, s)
 	return err == nil && matched
 }

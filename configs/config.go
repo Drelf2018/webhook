@@ -9,13 +9,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// 设置引用类型对象默认值
-func SetNil[C any, T utils.CanNil[C]](a *T, b T) {
-	if *a == nil {
-		*a = b
-	}
-}
-
 // 资源文件夹路径
 type Path struct {
 	Root    string `yaml:"root" default:"resource"`

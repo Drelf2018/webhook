@@ -2,17 +2,14 @@ package service
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/Drelf2018/asyncio"
-	"github.com/Drelf2018/request"
 	"github.com/Drelf2018/webhook/api"
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/Drelf2020/utils"
 	"github.com/gin-contrib/static"
-	"gorm.io/gorm/clause"
 )
 
 type LifeCycle interface {
@@ -46,29 +43,6 @@ func (c Cycle) OnCreate(r *configs.Config) {
 	user.Init(r)
 	// 资源数据库初始化
 	data.Init(r)
-	// 初始化测试用户
-	if r.Debug {
-		user.Users.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&user.User{
-			Uid:        "188888131",
-			Token:      "********",
-			Permission: 1,
-			Jobs: []user.Job{
-				{
-					Pattern: "bilibili434334701",
-					Job: request.Job{
-						Method: http.MethodPost,
-						Url:    "https://postman-echo.com/post",
-						Data: request.M{
-							"msg":    "{content}",
-							"uid":    "{uid}",
-							"origin": "{text}",
-						},
-					},
-				},
-			},
-			Listening: make(user.Listening, 0),
-		})
-	}
 	// 多次尝试克隆主页到本地
 	go asyncio.RetryError(10, 0, r.UpdateIndex)
 	// 检查文件是否存在
