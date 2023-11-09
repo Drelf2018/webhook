@@ -36,7 +36,7 @@ func IsSubmitter(c *gin.Context) {
 	SetZero(&token, token1, token2)
 
 	if token == "" {
-		Failed(c, 1, "你是不是调错接口了啊")
+		Failed(c, 1, "需要身份鉴权")
 		return
 	}
 
@@ -46,8 +46,14 @@ func IsSubmitter(c *gin.Context) {
 		return
 	}
 
+	// 修改在线时间戳
 	utils.Timer(u.Uid)
 	c.Set("user", u)
+
+	// 不记录 ping 请求
+	if strings.Contains(c.Request.URL.Path, "/ping") {
+		return
+	}
 
 	// 清除 query 中的身份码
 	if ok1 || ok2 {
@@ -60,9 +66,11 @@ func IsSubmitter(c *gin.Context) {
 		}
 		c.Request.URL.RawQuery = strings.Join(query, "&")
 	}
+	// 打印日志
 	log.Infof("%v %v \"%v\"", u, c.Request.Method, c.Request.URL)
 }
 
+// 更新在线时间
 func Ping(c *gin.Context) {
 	utils.Timer(GetUser(c).Uid)
 }
