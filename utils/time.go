@@ -3,17 +3,8 @@ package utils
 import (
 	"strconv"
 	"time"
-
-	"github.com/Drelf2018/asyncio"
 	"github.com/gin-gonic/gin"
 )
-
-func Delay(seconds float64, fn any, args ...any) {
-	go func() {
-		time.Sleep(time.Duration(1000*seconds) * time.Millisecond)
-		asyncio.CreateTask(fn, args...).Run()
-	}()
-}
 
 // 时间类 方便相互转换
 type Time struct {

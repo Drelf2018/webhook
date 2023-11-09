@@ -8,10 +8,10 @@ import (
 
 	"golang.org/x/exp/slices"
 
+	"github.com/Drelf2018/asyncio"
 	"github.com/Drelf2018/webhook/configs"
 	"github.com/Drelf2018/webhook/service/data"
 	"github.com/Drelf2018/webhook/service/user"
-	"github.com/Drelf2018/webhook/utils"
 	u20 "github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -66,7 +66,7 @@ func Close(c *gin.Context) {
 	u20.CloseLogFile()
 	data.Posts.Close()
 	user.Users.Close()
-	utils.Delay(5, os.Exit, 0)
+	asyncio.Delay(5, os.Exit, 0)
 	Succeed(c, "人生有梦，各自精彩！")
 }
 
