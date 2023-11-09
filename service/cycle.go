@@ -147,8 +147,11 @@ func (c Cycle) Submitter(r *configs.Config) {
 	// 移除任务
 	r.GET("/remove", api.RemoveJobs)
 
+	// 测试单个任务
+	r.POST("/test", api.TestJob)
+
 	// 测试任务
-	r.GET("/test", api.TestJobs)
+	r.GET("/tests", api.TestJobs)
 
 	// 提交博文
 	r.POST("/submit", api.Submit)

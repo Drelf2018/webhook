@@ -97,6 +97,10 @@ func Register(c *gin.Context) {
 
 // 获取 begin 与 end 时间范围内的所有博文
 func GetPosts(c *gin.Context) {
+	if _, ok := c.GetQuery("test"); ok {
+		Succeed(c, "posts", []data.Post{*data.TestPost}, "online", utils.Timer())
+		return
+	}
 	begin, end := c.Query("begin"), c.Query("end")
 	TimeNow := utils.NewTime(nil)
 	if end == "" {

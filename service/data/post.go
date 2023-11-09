@@ -142,8 +142,8 @@ func GetPosts(begin, end string, r *[]Post) {
 	Posts.Preloads(r, "time BETWEEN ? AND ?", begin, end)
 }
 
-// 返回一个测试博文
-var DefaultPost = &Post{
+// 测试博文
+var TestPost = &Post{
 	Platform: "weibo",
 	Mid:      "4952487292307646",
 	Time:     "1696248446",
@@ -179,10 +179,13 @@ var DefaultPost = &Post{
 				Url: "https://wx4.sinaimg.cn/orj480/8351d064ly8hiph621dryj20u00u00vw.jpg",
 			},
 		},
+		Comments: make([]Post, 0),
 		Attachments: Attachments{
 			{Url: "https://wx2.sinaimg.cn/large/8351d064ly1hih23pb486j21tk19k7wk.jpg"},
 		},
 		Submitter: &user.User{Uid: "188888131", Permission: 1},
 	},
-	Submitter: &user.User{Uid: "188888131", Permission: 1},
+	Comments:    make([]Post, 0),
+	Attachments: make(Attachments, 0),
+	Submitter:   &user.User{Uid: "188888131", Permission: 1},
 }

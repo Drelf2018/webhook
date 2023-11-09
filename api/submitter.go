@@ -102,12 +102,18 @@ func RemoveJobs(c *gin.Context) {
 	Final(c, 1, u.RemoveJobs(c.QueryArray("jobs")), []any{"received", u.Jobs}, u.Jobs)
 }
 
+// 测试单个任务
+func TestJob(c *gin.Context) {
+	job := user.Job{}
+	if Error(c, 1, c.Bind(&job), "received", job) {
+		return
+	}
+	Succeed(c, data.TestPost.Send([]user.Job{job})[0])
+}
+
 // 测试任务
 func TestJobs(c *gin.Context) {
-	jobs := user.GetJobsByID(GetUser(c).Uid, c.QueryArray("jobs")...)
-	r := make([]gin.H, 0)
-	data.DefaultPost.Send(jobs, &r)
-	Succeed(c, r)
+	Succeed(c, data.TestPost.Send(user.GetJobsByID(GetUser(c).Uid, c.QueryArray("jobs")...)))
 }
 
 // 提交博文
