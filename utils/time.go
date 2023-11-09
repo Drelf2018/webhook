@@ -3,7 +3,6 @@ package utils
 import (
 	"strconv"
 	"time"
-	"github.com/gin-gonic/gin"
 )
 
 // 时间类 方便相互转换
@@ -77,16 +76,19 @@ func NewTime(t any) Time {
 	return Time{}
 }
 
-var users = make(map[string]int64)
+var timer = struct {
+	Server int64            `json:"server"`
+	Users  map[string]int64 `json:"users"`
+}{
+	Server: time.Now().Unix(),
+	Users:  make(map[string]int64),
+}
 
 // 更新时间戳
-func Timer(uids ...string) gin.H {
-	stamp := time.Now().Unix()
+func Timer(uids ...string) any {
+	timer.Server = time.Now().Unix()
 	for _, uid := range uids {
-		users[uid] = stamp
+		timer.Users[uid] = timer.Server
 	}
-	return gin.H{
-		"server": stamp,
-		"users":  users,
-	}
+	return timer
 }
