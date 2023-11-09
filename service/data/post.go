@@ -1,16 +1,19 @@
 package data
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/Drelf2018/asyncio"
 	"github.com/Drelf2018/initial"
+	"github.com/Drelf2018/request"
 	"github.com/Drelf2018/webhook/service/db"
 	"github.com/Drelf2018/webhook/service/user"
 	"github.com/Drelf2018/webhook/utils"
-	"github.com/gin-gonic/gin"
+	"github.com/itchyny/timefmt-go"
 )
 
 // 博文或评论
@@ -70,8 +73,9 @@ func (p *Post) String() string {
 }
 
 // 替换通配符
-func (p *Post) ReplaceData(text string) string {
+func (p *Post) replaceData(text string) string {
 	if p.replacer == nil {
+		post, _ := json.Marshal(p)
 		p.replacer = strings.NewReplacer(
 			"{mid}", p.Mid,
 			"{time}", p.Time,
@@ -87,37 +91,40 @@ func (p *Post) ReplaceData(text string) string {
 			"{following}", p.Blogger.Following,
 			"{attachments}", p.Attachments.Urls(),
 			"{content}", utils.Clean(p.Text),
+			"{post}", string(post),
 			"{repost.", "{",
 		)
 	}
 	return p.replacer.Replace(text)
 }
 
-func (p *Post) Send(jobs []user.Job, responses *[]gin.H) {
-	asyncio.ForEach(jobs, func(job user.Job) {
+var timeFormatter = regexp.MustCompile(`\{format:([^\}]+)\}`)
+
+func (p *Post) replaceTimeFormat(s string) string {
+	oldnew := make([]string, 0)
+	tt := utils.Time{String: p.Time}.ToDate()
+	for _, s := range timeFormatter.FindAllStringSubmatch(s, -1) {
+		oldnew = append(oldnew, s[0], timefmt.Format(tt, s[1]))
+	}
+	return strings.NewReplacer(oldnew...).Replace(s)
+}
+
+func (p *Post) Send(jobs []user.Job) []*request.ResultWithJob {
+	return asyncio.ForEachV(jobs, func(job user.Job) *request.ResultWithJob {
 		for k, v := range job.Data {
-			v = p.ReplaceData(v)
+			v = p.replaceData(p.replaceTimeFormat(v))
 			if p.Repost != nil {
-				v = p.Repost.ReplaceData(v)
+				v = p.Repost.replaceData(p.Repost.replaceTimeFormat(v))
 			}
 			job.Data[k] = v
 		}
-		result := job.Request()
-		if responses != nil {
-			if result.Error() != nil {
-				*responses = append(*responses, gin.H{"job": job, "error": result.Error()})
-			} else {
-				r := make(gin.H)
-				result.Json(&r)
-				*responses = append(*responses, gin.H{"job": job, "result": r})
-			}
-		}
+		return job.RequestWithJob()
 	})
 }
 
 // 回调博文
 func (p *Post) Webhook() {
-	p.Send(user.GetJobsByRegexp(p.Blogger.Platform, p.Blogger.Uid), nil)
+	p.Send(user.GetJobsByRegexp(p.Blogger.Platform, p.Blogger.Uid))
 }
 
 // 判断博文是否存在
