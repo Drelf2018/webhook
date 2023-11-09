@@ -24,7 +24,7 @@ func Cors(c *gin.Context) {
 	}
 }
 
-const VERSION = "v0.13.0"
+const VERSION = "v0.13.1"
 
 // 当前版本号
 func Version(c *gin.Context) {
