@@ -18,7 +18,7 @@ var Users db.DB
 
 func Init(r *configs.Config) {
 	Users.SetSqlite(r.Path.Full.Users).AutoMigrate(&Job{}, &User{})
-	SetApi(r.Oid)
+	bili.Data["oid"] = r.Oid
 }
 
 // 监听列表获取错误
@@ -61,30 +61,15 @@ func (u *User) Update() error {
 	return Users.DB.Updates(u).Error
 }
 
-// 构造函数
-func Make(uid string) *User {
-	u := User{
-		Uid:        uid,
-		Token:      uuid.NewV4().String(),
-		Permission: 5.10,
+// 检查回复
+func (u *User) MatchReplies() (bool, error) {
+	replies, err := GetReplies()
+	if err != nil {
+		return false, err
 	}
-	if slices.Contains(configs.Get().Administrators, uid) {
-		u.Permission = 1.0
-	}
-	Users.DB.Create(&u)
-	return &u
-}
-
-// 根据 uid 查询
-func Query(token string) *User {
-	if token == "" {
-		return nil
-	}
-	var u User
-	if Users.Preload(&u, "token = ?", token).NoRecord() {
-		return nil
-	}
-	return &u
+	return slices.ContainsFunc(replies, func(r *Replie) bool {
+		return r.Member.Mid == u.Uid && r.Content.Message == u.Token
+	}), nil
 }
 
 // 修改权限
@@ -114,4 +99,30 @@ func (u *User) Scan(val any) error {
 
 func (u User) Value() (driver.Value, error) {
 	return u.Uid, nil
+}
+
+// 构造函数
+func Make(uid string) *User {
+	u := User{
+		Uid:        uid,
+		Token:      uuid.NewV4().String(),
+		Permission: 5.10,
+	}
+	if slices.Contains(configs.Get().Administrators, uid) {
+		u.Permission = 1.0
+	}
+	Users.DB.Create(&u)
+	return &u
+}
+
+// 根据 uid 查询
+func Query(token string) *User {
+	if token == "" {
+		return nil
+	}
+	var u User
+	if Users.Preload(&u, "token = ?", token).NoRecord() {
+		return nil
+	}
+	return &u
 }
