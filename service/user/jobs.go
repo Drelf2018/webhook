@@ -25,7 +25,7 @@ func (job *Job) Match(s string) bool {
 // 正则匹配任务
 func GetJobsByRegexp(platform, uid string) []Job {
 	var jobs []Job
-	Users.Find(&jobs, "pattern LIKE ?", platform+"%")
+	Users.Find(&jobs, "user_uid <> '' and pattern LIKE ?", platform+"%")
 	return utils.Filter(jobs, func(job Job) bool { return job.Match(platform + uid) })
 }
 

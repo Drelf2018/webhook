@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var local = time.FixedZone("CST", 8*3600)
+
 // 时间类 方便相互转换
 type Time struct {
 	String string
@@ -49,7 +51,7 @@ func (t Time) ToDate() time.Time {
 		t.Stamp, _ = strconv.ParseInt(t.String, 10, 64)
 	}
 	if t.Stamp != 0 {
-		return time.Unix(t.Stamp, 0)
+		return time.Unix(t.Stamp, 0).In(local)
 	}
 	return time.Time{}
 }

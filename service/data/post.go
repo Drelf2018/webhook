@@ -86,7 +86,7 @@ func (p *Post) String() string {
 }
 
 // 替换通配符
-func (p *Post) replaceData(text string) string {
+func (p *Post) replaceData(text string) (s string) {
 	if p.replacer == nil {
 		post, _ := json.Marshal(p)
 		p.replacer = strings.NewReplacer(
@@ -108,7 +108,11 @@ func (p *Post) replaceData(text string) string {
 			"{repost.", "{",
 		)
 	}
-	return p.replacer.Replace(text)
+	s = p.replacer.Replace(p.replaceTimeFormat(text))
+	if p.Repost != nil {
+		return p.Repost.replaceData(s)
+	}
+	return
 }
 
 var timeFormatter = regexp.MustCompile(`\{format:([^\}]+)\}`)
@@ -125,11 +129,7 @@ func (p *Post) replaceTimeFormat(s string) string {
 func (p *Post) Send(jobs []user.Job) []*request.ResultWithJob {
 	return asyncio.ForEachV(jobs, func(job user.Job) *request.ResultWithJob {
 		for k, v := range job.Data {
-			v = p.replaceData(p.replaceTimeFormat(v))
-			if p.Repost != nil {
-				v = p.Repost.replaceData(p.Repost.replaceTimeFormat(v))
-			}
-			job.Data[k] = v
+			job.Data[k] = p.replaceData(v)
 		}
 		return job.RequestWithJob()
 	})
