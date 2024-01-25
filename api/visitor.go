@@ -1,104 +1,110 @@
 package api
 
 import (
-	"net/http"
-	"os"
 	"runtime"
 
-	"github.com/Drelf2018/webhook/configs"
-	"github.com/Drelf2018/webhook/service/data"
-	"github.com/Drelf2018/webhook/service/user"
+	"github.com/Drelf2018/webhook/config"
+	"github.com/Drelf2018/webhook/model"
 	"github.com/Drelf2018/webhook/utils"
 	u20 "github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
+	uuid "github.com/satori/go.uuid"
 )
 
-func Cors(c *gin.Context) {
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-	c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Cache-Control, Content-Language, Content-Type")
-	c.Header("Access-Control-Allow-Credentials", "true")
-	// 禁止所有 OPTIONS 方法 原因见博文
-	if c.Request.Method == http.MethodOptions {
-		c.AbortWithStatus(http.StatusNoContent)
-	}
-}
-
-const VERSION = "v0.13.1"
+type Visitor int
 
 // 当前版本号
-func Version(c *gin.Context) {
-	Succeed(c, VERSION)
+func (Visitor) GetVersion(c *gin.Context) {
+	Succeed(c, config.VERSION)
+}
+
+func Ternary[K comparable, T any](expr K, value K, a, b T) T {
+	if expr == value {
+		return a
+	}
+	return b
 }
 
 // 查看资源目录
-func List(c *gin.Context) {
-	cmd := u20.Ternary(runtime.GOOS == "windows", "dir /s /b", "du -ah")
+func (Visitor) GetList(c *gin.Context) {
+	cmd := Ternary(runtime.GOOS, "windows", "dir /s /b", "du -ah")
 	s, err := Shell(cmd)
-	Final(c, 1, err, nil, s)
-}
-
-// 解析图片网址并返回文件
-//
-// 获取参数 https://blog.csdn.net/weixin_52690231/article/details/124109518
-//
-// 返回文件 https://blog.csdn.net/kilmerfun/article/details/123943070
-//
-// 重定向至 https://www.ngui.cc/el/3757797.html?action=onClick
-func Fetch(c *gin.Context) {
-	c.Request.URL.Path = data.Save(c.Param("url")[1:])
-	configs.Get().Engine.HandleContext(c)
+	if err != nil {
+		Abort(c, err)
+		return
+	}
+	Succeed(c, s)
 }
 
 // 获取当前在线状态
-func Online(c *gin.Context) {
+func (Visitor) GetOnline(c *gin.Context) {
 	Succeed(c, utils.Timer())
 }
 
+var tokens = make(map[string][2]string)
+
+// 获取随机 Token
+func generateRandomToken(uid string) (auth, token string) {
+	token = utils.RandomNumberMixString(6, 3)
+	auth = uuid.NewV4().String()
+	tokens[uid] = [2]string{auth, token}
+	return
+}
+
+func getDataByAuth(auth string) (uid string, token string, ok bool) {
+	for uid, data := range tokens {
+		if data[0] == auth {
+			return uid, data[1], true
+		}
+	}
+	return "", "", false
+}
+
 // 获取注册所需 Token
-func GetToken(c *gin.Context) {
+func (Visitor) GetToken(c *gin.Context) {
 	uid := c.Query("uid")
 	if !u20.IsDigit(uid) {
-		Failed(c, 1, "请正确填写纯数字的 uid 参数", "received", uid)
+		Abort(c, "请正确填写纯数字的 uid 参数")
 		return
 	}
-	auth, token := user.GetRandomToken(uid)
-	Succeed(c, "auth", auth, "token", token, "oid", configs.Get().Oid)
+	auth, token := generateRandomToken(uid)
+	Succeed(c, "auth", auth, "token", token, "oid", config.Global.Oid)
 }
 
 // 新建用户
-func Register(c *gin.Context) {
+func (Visitor) GetRegister(c *gin.Context) {
 	auth := c.GetHeader("Authorization")
 	if auth == "" {
 		auth = c.Query("Authorization")
 	}
-	u, ok := user.Tokens[auth]
+	uid, token, ok := getDataByAuth(auth)
 	if !ok {
-		Failed(c, 1, "请先获取验证码")
+		Abort(c, "请先获取验证码")
 		return
 	}
-	matched, err := u.MatchReplies()
-	if Error(c, 2, err) {
+	matched, err := utils.SearchToken(uid, token)
+	if err != nil {
+		Abort(c, err)
 		return
 	}
 	if !matched {
-		Failed(c, 3, "验证失败")
+		Abort(c, "验证失败")
 		return
 	}
-	user.Done(u.Uid)
-	if user.Users.First(&u, "uid = ?", u.Uid) {
+	delete(tokens, uid)
+	if u := model.QueryAuth(uid); u != nil {
 		// 已注册用户
-		Succeed(c, u.Token)
+		Succeed(c, u.Auth)
 	} else {
 		// 新建用户
-		Succeed(c, user.Make(u.Uid).Token)
+		Succeed(c, model.NewUser(uid).Auth)
 	}
 }
 
 // 获取 begin 与 end 时间范围内的所有博文
-func GetPosts(c *gin.Context) {
+func (Visitor) GetPosts(c *gin.Context) {
 	if _, ok := c.GetQuery("test"); ok {
-		Succeed(c, "posts", []data.Post{*data.TestPost}, "online", utils.Timer())
+		Succeed(c, "posts", []model.Post{*model.TestPost}, "online", utils.Timer())
 		return
 	}
 	begin, end := c.Query("begin"), c.Query("end")
@@ -110,32 +116,28 @@ func GetPosts(c *gin.Context) {
 		// 10 秒的冗余还是太短了啊 没事的 10 秒也很厉害了
 		begin = TimeNow.Delay(-30).ToString()
 	}
-	posts := make([]data.Post, 0)
-	data.GetPosts(begin, end, &posts)
-	Succeed(c, "posts", posts, "online", utils.Timer())
+	Succeed(c, "posts", model.GetPosts(begin, end), "online", utils.Timer())
 }
 
 // 获取所有分支
-func GetBranches(c *gin.Context) {
-	platform, mid := c.Param("platform"), c.Param("mid")
-	posts := make([]data.Post, 0)
-	data.GetBranches(platform, mid, &posts)
-	Succeed(c, posts)
-}
+// func GetBranches(c *gin.Context) {
+// 	platform, mid := c.Param("platform"), c.Param("mid")
+// 	posts := make([]data.Post, 0)
+// 	data.GetBranches(platform, mid, &posts)
+// 	Succeed(c, posts)
+// }
 
 // 获取所有评论
-func GetComments(c *gin.Context) {
-	platform, mid := c.Param("platform"), c.Param("mid")
-	p := data.GetPost(platform, mid)
-	if p == nil {
-		Failed(c, 1, "未找到评论")
-		return
-	}
-	Succeed(c, p.Comments)
-}
+// func GetComments(c *gin.Context) {
+// 	platform, mid := c.Param("platform"), c.Param("mid")
+// 	p := data.GetPost(platform, mid)
+// 	if p == nil {
+// 		Failed(c, 1, "未找到评论")
+// 		return
+// 	}
+// 	Succeed(c, p.Comments)
+// }
 
-// 读取日志
-func ReadLog(c *gin.Context) {
-	b, err := os.ReadFile(configs.Get().Path.Full.Log)
-	Final(c, 1, err, nil, CutString(b))
-}
+// func (Visitor) GetParse(c *gin.Context) {
+// 	Succeed(c, "error", model.TestPost.Parse())
+// }

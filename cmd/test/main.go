@@ -1,7 +1,15 @@
 package main
 
-import "github.com/Drelf2018/webhook"
+import (
+	"github.com/Drelf2018/webhook"
+	"github.com/gin-gonic/gin"
+)
 
 func main() {
-	webhook.Run(&webhook.Config{Debug: true, Administrators: []string{"188888131"}})
+	webhook.Default(&webhook.Config{
+		Mode:  gin.DebugMode,
+		Host:  "localhost",
+		Port:  9000,
+		Owner: "188888131",
+	})
 }

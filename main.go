@@ -1,22 +1,36 @@
 package webhook
 
 import (
-	"github.com/Drelf2018/webhook/configs"
-	"github.com/Drelf2018/webhook/service"
+	"github.com/Drelf2018/gins"
+	"github.com/Drelf2018/webhook/api"
+	"github.com/Drelf2018/webhook/config"
+	"github.com/gin-gonic/gin"
 )
 
 type (
-	Config = configs.Config
-	Github = configs.Github
-	Path   = configs.Path
+	Config = config.Config
+	Github = config.Github
 )
 
-// 使用自定义 LifeCycle 启动
-func RunWithCycle(c *configs.Config, cycle service.LifeCycle) {
-	cycle.Bind(configs.Set(c))
+func SetConfig(c *config.Config) error {
+	err := config.Set(c)
+	if err != nil {
+		return err
+	}
+	gin.SetMode(config.Global.Mode)
+	return nil
 }
 
-// 启动！
-func Run(c *configs.Config) {
-	RunWithCycle(c, service.Cycle(114514))
+func New(r *gin.Engine, c *config.Config) error {
+	SetConfig(c)
+	return r.Run(config.Global.Addr())
+}
+
+func Default(c *config.Config) error {
+	SetConfig(c)
+	r, err := gins.Default(api.Api{})
+	if err != nil {
+		return err
+	}
+	return r.Run(config.Global.Addr())
 }

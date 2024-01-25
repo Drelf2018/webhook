@@ -1,8 +1,9 @@
-package configs
+package config
 
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Drelf2018/request"
 	"github.com/Drelf2020/utils"
@@ -54,11 +55,16 @@ func (g *Github) Clone(folder string) error {
 }
 
 // 更新主页
-func (g *Github) UpdateIndex(views, index, version string) error {
+func (g *Github) UpdateIndex() error {
 	// 先获取最新版本
 	if err := g.GetLatestCommit(); err != nil {
 		return err
 	}
+	var (
+		views   = "./views"
+		index   = "./views/index.html"
+		version = "./views/.version"
+	)
 	// 判断当前版本是否最新
 	if utils.FileExist(index) {
 		b, err := os.ReadFile(version)
@@ -72,4 +78,15 @@ func (g *Github) UpdateIndex(views, index, version string) error {
 		return err
 	}
 	return os.WriteFile(version, g.Sha(), os.ModePerm)
+}
+
+func (g *Github) MustUpdate(*Config) {
+	go func() {
+		var err error = g.UpdateIndex()
+		for err != nil {
+			fmt.Printf("err: %v\n", err)
+			err = g.UpdateIndex()
+			time.Sleep(3 * time.Second)
+		}
+	}()
 }
