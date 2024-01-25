@@ -4,12 +4,14 @@ github.com/Drelf2018/TypeGo v0.7.4 h1:s88yfvKWGT8Avjvepa8SeE/CPO3yhHz1+RN+ZhahsW
 github.com/Drelf2018/TypeGo v0.7.4/go.mod h1:hpA8NTaInfI25zNS0P4irE4Hk+kuHFmVPJxco7NhaPM=
 github.com/Drelf2018/asyncio v0.13.0 h1:eJNALR2hYLqWn3V0X+hr5gKY3X71mNjF2+F/ZfEcjK0=
 github.com/Drelf2018/asyncio v0.13.0/go.mod h1:hzm9S+SsVPlFHf+ueJAGwrXnLGKzP8y5vYnBWh3WiF8=
-github.com/Drelf2018/cmps v1.7.0 h1:fvDYAa/V4WSVIoQSmhwNjsYXLZ+JeVKFtGVeXaX3aXE=
-github.com/Drelf2018/cmps v1.7.0/go.mod h1:YYYOFJQm/zf6CBHc7+oh3cgGHmlB4eV1FZbTu4AjwTg=
+github.com/Drelf2018/cmps v1.7.1 h1:+B8Dr9Yfuj7gUNrxA5pHezb/M+ehByjxXkH9ZaSNGJk=
+github.com/Drelf2018/cmps v1.7.1/go.mod h1:BHBOhsi90MU4FAPenhnHctOAoxYK/hNGR4dsW+749kE=
 github.com/Drelf2018/gins v0.1.1 h1:+3zD3IxZQnbbJUX8VlaTPplwCwZwOFSm8H5hMtzPaYE=
 github.com/Drelf2018/gins v0.1.1/go.mod h1:aJPlUGI8ET/x5/6vOOBpq1XFTmiNlREBTgzNF2ZYoxo=
 github.com/Drelf2018/gorms v0.0.0-20240123084720-c11075c16102 h1:K/ZTGuTBA+ZP0ZPJ3wLFloCvdbU7ovsXj8Sj+Snh5sc=
 github.com/Drelf2018/gorms v0.0.0-20240123084720-c11075c16102/go.mod h1:eMzZOTM0GLswoHxkySJ1vNz2hTWyHNxatCk3R16w8r4=
+github.com/Drelf2018/gorms v0.0.0-20240125150841-a7d8d75f39a5 h1:09e1fRPXJ5Dt5p+3IeoG3SEQgTIat15i5YNvVes8SdU=
+github.com/Drelf2018/gorms v0.0.0-20240125150841-a7d8d75f39a5/go.mod h1:vBTbljSol3hZ+6fbo6cbmPzos9JTjRhk/dTYx5RClI4=
 github.com/Drelf2018/initial v0.7.3 h1:kTEyo5ktu1R+ZobVSCneBs1e5+Oy1DcseCS9M3XKwkw=
 github.com/Drelf2018/initial v0.7.3/go.mod h1:SK0qKPAC8OqSgVVwoa6f+ct2CIADEWh7OuDz/vma1Oc=
 github.com/Drelf2018/request v0.9.0 h1:5VF/J8IM1ITkk7EAyo2EiOhfAP8eeUtUa7Xu/YHxkdg=

@@ -4,9 +4,9 @@ go 1.18
 
 require (
 	github.com/Drelf2018/asyncio v0.13.0
-	github.com/Drelf2018/cmps v1.7.0
+	github.com/Drelf2018/cmps v1.7.1
 	github.com/Drelf2018/gins v0.1.1
-	github.com/Drelf2018/gorms v0.0.0-20240123084720-c11075c16102
+	github.com/Drelf2018/gorms v0.0.0-20240125150841-a7d8d75f39a5
 	github.com/Drelf2018/initial v0.7.3
 	github.com/Drelf2018/request v0.9.0
 	github.com/Drelf2020/utils v0.8.0
