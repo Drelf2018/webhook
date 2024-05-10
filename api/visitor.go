@@ -1,141 +1,124 @@
 package api
 
 import (
-	"net/http"
-	"os"
 	"runtime"
+	"slices"
 
-	"github.com/Drelf2018/webhook/configs"
-	"github.com/Drelf2018/webhook/service/data"
-	"github.com/Drelf2018/webhook/service/user"
+	"github.com/Drelf2018/webhook/config"
+	"github.com/Drelf2018/webhook/database/dao"
+	"github.com/Drelf2018/webhook/database/model"
+	"github.com/Drelf2018/webhook/interfaces"
 	"github.com/Drelf2018/webhook/utils"
-	u20 "github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
+
+	group "github.com/Drelf2018/gin-group"
 )
 
-func Cors(c *gin.Context) {
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-	c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Cache-Control, Content-Language, Content-Type")
-	c.Header("Access-Control-Allow-Credentials", "true")
-	// 禁止所有 OPTIONS 方法 原因见博文
-	if c.Request.Method == http.MethodOptions {
-		c.AbortWithStatus(http.StatusNoContent)
-	}
+var Visitor = group.Group{
+	Handlers: group.Chain{
+		GetVersion,
+		GetList,
+		GetOnline,
+		GetToken,
+		GetRegister,
+	},
 }
 
-const VERSION = "v0.13.1"
-
 // 当前版本号
-func Version(c *gin.Context) {
-	Succeed(c, VERSION)
+func GetVersion(ctx *gin.Context) (any, group.Error) {
+	return config.VERSION, nil
+}
+
+var CmdList string
+
+func init() {
+	switch runtime.GOOS {
+	case "windows":
+		CmdList = "dir /s /b"
+	case "linux":
+		CmdList = "du -ah"
+	}
 }
 
 // 查看资源目录
-func List(c *gin.Context) {
-	cmd := u20.Ternary(runtime.GOOS == "windows", "dir /s /b", "du -ah")
-	s, err := Shell(cmd)
-	Final(c, 1, err, nil, s)
-}
-
-// 解析图片网址并返回文件
-//
-// 获取参数 https://blog.csdn.net/weixin_52690231/article/details/124109518
-//
-// 返回文件 https://blog.csdn.net/kilmerfun/article/details/123943070
-//
-// 重定向至 https://www.ngui.cc/el/3757797.html?action=onClick
-func Fetch(c *gin.Context) {
-	c.Request.URL.Path = data.Save(c.Param("url")[1:])
-	configs.Get().Engine.HandleContext(c)
+func GetList(ctx *gin.Context) (any, group.Error) {
+	return WrapError(utils.RunShell(CmdList, ""))
 }
 
 // 获取当前在线状态
-func Online(c *gin.Context) {
-	Succeed(c, utils.Timer())
+func GetOnline(ctx *gin.Context) (any, group.Error) {
+	return utils.OnlineList, nil
 }
 
 // 获取注册所需 Token
-func GetToken(c *gin.Context) {
-	uid := c.Query("uid")
-	if !u20.IsDigit(uid) {
-		Failed(c, 1, "请正确填写纯数字的 uid 参数", "received", uid)
-		return
-	}
-	auth, token := user.GetRandomToken(uid)
-	Succeed(c, "auth", auth, "token", token, "oid", configs.Get().Oid)
+func GetToken(ctx *gin.Context) (any, group.Error) {
+	return WrapError(interfaces.Token(ctx))
 }
 
 // 新建用户
-func Register(c *gin.Context) {
-	auth := c.GetHeader("Authorization")
-	if auth == "" {
-		auth = c.Query("Authorization")
+func GetRegister(ctx *gin.Context) (any, group.Error) {
+	uid, err := interfaces.Register(ctx)
+	if err != nil {
+		return nil, group.AutoError(err)
 	}
-	u, ok := user.Tokens[auth]
-	if !ok {
-		Failed(c, 1, "请先获取验证码")
-		return
+
+	user := dao.QueryUserByUID(uid)
+
+	// 已注册
+	if user != nil {
+		return user.Auth, nil
 	}
-	matched, err := u.MatchReplies()
-	if Error(c, 2, err) {
-		return
+
+	// 新建用户
+	var permission model.Permission
+	switch {
+	case uid == config.Global.Permission.Owner:
+		permission = model.Owner
+	case slices.Contains(config.Global.Permission.Administrators, uid):
+		permission = model.Administrator
+	case slices.Contains(config.Global.Permission.Trustors, uid):
+		permission = model.Trustor
 	}
-	if !matched {
-		Failed(c, 3, "验证失败")
-		return
-	}
-	user.Done(u.Uid)
-	if user.Users.First(&u, "uid = ?", u.Uid) {
-		// 已注册用户
-		Succeed(c, u.Token)
-	} else {
-		// 新建用户
-		Succeed(c, user.Make(u.Uid).Token)
-	}
+	return dao.NewUser(uid, permission).Auth, nil
 }
 
 // 获取 begin 与 end 时间范围内的所有博文
-func GetPosts(c *gin.Context) {
-	if _, ok := c.GetQuery("test"); ok {
-		Succeed(c, "posts", []data.Post{*data.TestPost}, "online", utils.Timer())
-		return
-	}
-	begin, end := c.Query("begin"), c.Query("end")
-	TimeNow := utils.NewTime(nil)
-	if end == "" {
-		end = TimeNow.ToString()
-	}
-	if begin == "" {
-		// 10 秒的冗余还是太短了啊 没事的 10 秒也很厉害了
-		begin = TimeNow.Delay(-30).ToString()
-	}
-	posts := make([]data.Post, 0)
-	data.GetPosts(begin, end, &posts)
-	Succeed(c, "posts", posts, "online", utils.Timer())
-}
+// func GetPosts(ctx *gin.Context) (any, group.Error) {
+// 	if _, ok := ctx.GetQuery("test"); ok {
+// 		Succeed(c, "posts", []model.Post{*model.TestPost}, "online", utils.Timer())
+// 		return
+// 	}
+// 	begin, end := c.Query("begin"), c.Query("end")
+// 	TimeNow := utils.NewTime(nil)
+// 	if end == "" {
+// 		end = TimeNow.ToString()
+// 	}
+// 	if begin == "" {
+// 		// 10 秒的冗余还是太短了啊 没事的 10 秒也很厉害了
+// 		begin = TimeNow.Delay(-30).ToString()
+// 	}
+// 	Succeed(c, "posts", dao.GetPosts(begin, end), "online", utils.Timer())
+// }
 
 // 获取所有分支
-func GetBranches(c *gin.Context) {
-	platform, mid := c.Param("platform"), c.Param("mid")
-	posts := make([]data.Post, 0)
-	data.GetBranches(platform, mid, &posts)
-	Succeed(c, posts)
-}
+// func GetBranches(c *gin.Context) {
+// 	platform, mid := c.Param("platform"), c.Param("mid")
+// 	posts := make([]data.Post, 0)
+// 	data.GetBranches(platform, mid, &posts)
+// 	Succeed(c, posts)
+// }
 
 // 获取所有评论
-func GetComments(c *gin.Context) {
-	platform, mid := c.Param("platform"), c.Param("mid")
-	p := data.GetPost(platform, mid)
-	if p == nil {
-		Failed(c, 1, "未找到评论")
-		return
-	}
-	Succeed(c, p.Comments)
-}
+// func GetComments(c *gin.Context) {
+// 	platform, mid := c.Param("platform"), c.Param("mid")
+// 	p := data.GetPost(platform, mid)
+// 	if p == nil {
+// 		Failed(c, 1, "未找到评论")
+// 		return
+// 	}
+// 	Succeed(c, p.Comments)
+// }
 
-// 读取日志
-func ReadLog(c *gin.Context) {
-	b, err := os.ReadFile(configs.Get().Path.Full.Log)
-	Final(c, 1, err, nil, CutString(b))
-}
+// func (Visitor) GetParse(c *gin.Context) {
+// 	Succeed(c, "error", model.TestPost.Parse())
+// }
