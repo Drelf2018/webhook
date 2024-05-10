@@ -1,166 +1,161 @@
 package api
 
 import (
+	"errors"
 	"strings"
 
-	"github.com/Drelf2018/webhook/config"
-	"github.com/Drelf2018/webhook/model"
-
+	group "github.com/Drelf2018/gin-group"
+	"github.com/Drelf2018/webhook/database/dao"
+	"github.com/Drelf2018/webhook/database/model"
 	"github.com/Drelf2018/webhook/utils"
-	u20 "github.com/Drelf2020/utils"
+	"github.com/sirupsen/logrus"
+
 	"github.com/gin-gonic/gin"
 )
 
-var log = u20.SetTimestampFormat("2006-01-02 15:04:05")
+var log *logrus.Logger
 
-func init() {
-	u20.SetOutputFile(".log")
+var (
+	ErrNoAuthCode = errors.New("webhook/api: no authentication code")
+	ErrAuth       = errors.New("webhook/api: authentication failure")
+)
+
+var Submitter = group.Group{
+	Path: "submitter",
+	// Middlewares: gin.HandlersChain{SetUser},
+	Handlers: group.Chain{
+		GetMe,
+		GetPing,
+		GetRemove_job,
+		GetModify_follow,
+		PostSubmit,
+		PostAdd_job,
+		PostTest_job,
+	},
 }
 
-type Submitter int
-
-func (Submitter) Use(c *gin.Context) {
+func SetUser(ctx *gin.Context) {
 	// 从 headers 或者 query 获取身份码
-	token := c.GetHeader("Authorization")
+	token := ctx.GetHeader("Authorization")
 	if token == "" {
-		token, _ = c.GetQuery("auth")
+		token = ctx.Query("auth")
 	}
 	if token == "" {
-		token, _ = c.GetQuery("Auth")
+		token = ctx.Query("Auth")
 	}
 	if token == "" {
-		token, _ = c.GetQuery("authorization")
+		token = ctx.Query("authorization")
 	}
 	if token == "" {
-		token, _ = c.GetQuery("Authorization")
+		token = ctx.Query("Authorization")
 	}
 	if token == "" {
-		Abort(c, "需要身份鉴权")
+		group.Abort(ctx, nil, group.AutoError(ErrNoAuthCode))
 		return
 	}
 
-	u := model.QueryUser(token)
-	if u == nil {
-		Abort(c, "鉴权失败", token)
+	user := dao.QueryUserByAuth(token)
+	if user == nil {
+		group.Abort(ctx, nil, group.AutoError(ErrAuth))
 		return
 	}
 
 	// 修改在线时间戳
-	utils.Timer(u.Uid)
-	c.Set("user", u)
+	utils.OnlineList.Update(user.Uid)
+	group.SetUser(ctx, *user)
 
 	// 打印日志 不记录 ping 请求
-	if !strings.Contains(c.Request.URL.Path, "/ping") {
-		log.Infof("%v %v \"%v\"", u, c.Request.Method, c.Request.URL)
+	if !strings.Contains(ctx.Request.URL.Path, "/ping") {
+		log.Infof("%v %v \"%v\"", user, ctx.Request.Method, ctx.Request.URL)
 	}
 }
 
 // 更新在线时间
-func (Submitter) GetPing(c *gin.Context) {
-	utils.Timer(User(c).Uid)
+func GetPing(ctx *gin.Context) (any, group.Error) {
+	return "pong", nil
 }
 
 // 获取自身信息
-func (Submitter) GetMe(c *gin.Context) {
-	Succeed(c, c.MustGet("user"))
-}
-
-// 主动更新主页
-func (Submitter) GetUpdate(c *gin.Context) {
-	cfg := config.Global
-	err := cfg.UpdateIndex()
-	if err != nil {
-		Abort(c, err)
-		return
-	}
-	Succeed(c, cfg.Github.Commit.Sha)
+func GetMe(ctx *gin.Context) (any, group.Error) {
+	return group.GetUser[model.User](ctx), nil
 }
 
 // 更新监听列表
-func (Submitter) GetModify(c *gin.Context) {
-	u := User(c)
-	u.Follow = c.QueryArray("follow")
-	err := u.Update()
+func GetModify_follow(ctx *gin.Context) (any, group.Error) {
+	u := group.GetUser[model.User](ctx)
+	u.Follow = ctx.QueryArray("follow")
+	err := dao.UpdateUser(&u)
 	if err != nil {
-		Abort(c, err)
-		return
+		return nil, group.AutoError(err)
 	}
-	Succeed(c, u.Follow)
+	return u.Follow, nil
 }
 
 // 新增任务
-func (Submitter) PostAdd(c *gin.Context) {
+func PostAdd_job(ctx *gin.Context) (any, group.Error) {
 	job := model.Job{}
-	err := c.Bind(&job)
+	err := ctx.Bind(&job)
 	if err != nil {
-		Abort(c, err)
-		return
+		return nil, group.AutoError(err)
 	}
-	u := User(c)
+	u := group.GetUser[model.User](ctx)
 	u.Jobs = append(u.Jobs, job)
-	err = u.Update()
+	err = dao.UpdateUser(&u)
 	if err != nil {
-		Abort(c, err)
-		return
+		return nil, group.AutoError(err)
 	}
-	Succeed(c, u.Jobs)
+	return u.Jobs, nil
 }
 
 // 移除任务
-func (Submitter) GetRemove(c *gin.Context) {
-	u := User(c)
-	err := u.RemoveJobs(c.QueryArray("jobs"))
+func GetRemove_job(ctx *gin.Context) (any, group.Error) {
+	u := group.GetUser[model.User](ctx)
+	err := dao.RemoveJobs(&u, ctx.QueryArray("jobs"))
 	if err != nil {
-		Abort(c, err)
-		return
+		return nil, group.AutoError(err)
 	}
-	Succeed(c, u.Jobs)
+	return u.Jobs, nil
 }
 
 // 测试单个任务
-func (Submitter) PostTest(c *gin.Context) {
-	job := make([]model.Job, 1)
-	err := c.Bind(&job[0])
+func PostTest_job(ctx *gin.Context) (any, group.Error) {
+	var job model.Job
+	err := ctx.Bind(&job)
 	if err != nil {
-		Abort(c, err)
-		return
+		return nil, group.AutoError(err)
 	}
-	Succeed(c, model.TestPost.Send(job)[0])
+	return job.Send(model.TestPost), nil
 }
 
 // 测试任务
-func (Submitter) GetTests(c *gin.Context) {
-	jobs := model.GetJobsByID(User(c).Uid, c.QueryArray("jobs"))
-	Succeed(c, model.TestPost.Send(jobs))
-}
+// func (Submitter) GetTests(c *gin.Context) {
+// 	jobs := dao.GetJobsByID(User(c).Uid, c.QueryArray("jobs"))
+// 	model.TestPost.ScanAndSend()
+// 	Succeed(c, model.TestPost.Send(jobs))
+// }
 
-var ErrNoRepost = `Form key "repost" not found. A "null" value must be pass in if there is no repost.`
+var ErrNoRepost = group.NewError(1, `Form key "repost" not found. A "null" value must be pass in if there is no repost.`)
 
 // 提交博文
-func (Submitter) PostSubmit(c *gin.Context) {
+func PostSubmit(ctx *gin.Context) (any, group.Error) {
 	// 检验数据合法
-	v, ok := c.GetPostForm("repost")
+	v, ok := ctx.GetPostForm("repost")
 	if !ok {
-		Abort(c, ErrNoRepost, v)
-		return
+		return v, ErrNoRepost
 	}
 	// 初始化 post
-	post := model.Post{Submitter: User(c)}
+	u := group.GetUser[model.User](ctx)
+	post := model.Post{Submitter: &u}
 	// 绑定其他数据
-	err := c.Bind(&post)
+	err := ctx.Bind(&post)
 	if err != nil {
-		Abort(c, err)
-		return
+		return nil, group.AutoError(err)
 	}
 	// 不允许提交已储存的博文刷积分
-	if post.Exists() {
-		Abort(c, "该博文已被提交过")
-		return
+	if dao.ExistsPost(&post) {
+		return nil, group.NewError(144, "该博文已被提交过")
 	}
-	// 检查该用户是否已提交过
-	err = post.Submit()
-	if err != nil {
-		Abort(c, err)
-	}
-	Succeed(c, "提交成功")
+	dao.SavePost(&post)
+	dao.Webhook(&post)
+	return "提交成功", nil
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Drelf2018/webhook"
+	_ "github.com/Drelf2018/webhook/registrar"
 )
 
 func main() {

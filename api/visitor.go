@@ -2,122 +2,103 @@ package api
 
 import (
 	"runtime"
+	"slices"
 
 	"github.com/Drelf2018/webhook/config"
-	"github.com/Drelf2018/webhook/model"
+	"github.com/Drelf2018/webhook/database/dao"
+	"github.com/Drelf2018/webhook/database/model"
+	"github.com/Drelf2018/webhook/interfaces"
 	"github.com/Drelf2018/webhook/utils"
-	u20 "github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
-	uuid "github.com/satori/go.uuid"
+
+	group "github.com/Drelf2018/gin-group"
 )
 
-type Visitor int
-
-// 当前版本号
-func (Visitor) GetVersion(c *gin.Context) {
-	Succeed(c, config.VERSION)
+var Visitor = group.Group{
+	Handlers: group.Chain{
+		GetVersion,
+		GetList,
+		GetOnline,
+		GetToken,
+		GetRegister,
+	},
 }
 
-func Ternary[K comparable, T any](expr K, value K, a, b T) T {
-	if expr == value {
-		return a
+// 当前版本号
+func GetVersion(ctx *gin.Context) (any, group.Error) {
+	return config.VERSION, nil
+}
+
+var CmdList string
+
+func init() {
+	switch runtime.GOOS {
+	case "windows":
+		CmdList = "dir /s /b"
+	case "linux":
+		CmdList = "du -ah"
 	}
-	return b
 }
 
 // 查看资源目录
-func (Visitor) GetList(c *gin.Context) {
-	cmd := Ternary(runtime.GOOS, "windows", "dir /s /b", "du -ah")
-	s, err := Shell(cmd)
-	if err != nil {
-		Abort(c, err)
-		return
-	}
-	Succeed(c, s)
+func GetList(ctx *gin.Context) (any, group.Error) {
+	return WrapError(utils.RunShell(CmdList, ""))
 }
 
 // 获取当前在线状态
-func (Visitor) GetOnline(c *gin.Context) {
-	Succeed(c, utils.Timer())
-}
-
-var tokens = make(map[string][2]string)
-
-// 获取随机 Token
-func generateRandomToken(uid string) (auth, token string) {
-	token = utils.RandomNumberMixString(6, 3)
-	auth = uuid.NewV4().String()
-	tokens[uid] = [2]string{auth, token}
-	return
-}
-
-func getDataByAuth(auth string) (uid string, token string, ok bool) {
-	for uid, data := range tokens {
-		if data[0] == auth {
-			return uid, data[1], true
-		}
-	}
-	return "", "", false
+func GetOnline(ctx *gin.Context) (any, group.Error) {
+	return utils.OnlineList, nil
 }
 
 // 获取注册所需 Token
-func (Visitor) GetToken(c *gin.Context) {
-	uid := c.Query("uid")
-	if !u20.IsDigit(uid) {
-		Abort(c, "请正确填写纯数字的 uid 参数")
-		return
-	}
-	auth, token := generateRandomToken(uid)
-	Succeed(c, "auth", auth, "token", token, "oid", config.Global.Oid)
+func GetToken(ctx *gin.Context) (any, group.Error) {
+	return WrapError(interfaces.Token(ctx))
 }
 
 // 新建用户
-func (Visitor) GetRegister(c *gin.Context) {
-	auth := c.GetHeader("Authorization")
-	if auth == "" {
-		auth = c.Query("Authorization")
-	}
-	uid, token, ok := getDataByAuth(auth)
-	if !ok {
-		Abort(c, "请先获取验证码")
-		return
-	}
-	matched, err := utils.SearchToken(uid, token)
+func GetRegister(ctx *gin.Context) (any, group.Error) {
+	uid, err := interfaces.Register(ctx)
 	if err != nil {
-		Abort(c, err)
-		return
+		return nil, group.AutoError(err)
 	}
-	if !matched {
-		Abort(c, "验证失败")
-		return
+
+	user := dao.QueryUserByUID(uid)
+
+	// 已注册
+	if user != nil {
+		return user.Auth, nil
 	}
-	delete(tokens, uid)
-	if u := model.QueryAuth(uid); u != nil {
-		// 已注册用户
-		Succeed(c, u.Auth)
-	} else {
-		// 新建用户
-		Succeed(c, model.NewUser(uid).Auth)
+
+	// 新建用户
+	var permission model.Permission
+	switch {
+	case uid == config.Global.Permission.Owner:
+		permission = model.Owner
+	case slices.Contains(config.Global.Permission.Administrators, uid):
+		permission = model.Administrator
+	case slices.Contains(config.Global.Permission.Trustors, uid):
+		permission = model.Trustor
 	}
+	return dao.NewUser(uid, permission).Auth, nil
 }
 
 // 获取 begin 与 end 时间范围内的所有博文
-func (Visitor) GetPosts(c *gin.Context) {
-	if _, ok := c.GetQuery("test"); ok {
-		Succeed(c, "posts", []model.Post{*model.TestPost}, "online", utils.Timer())
-		return
-	}
-	begin, end := c.Query("begin"), c.Query("end")
-	TimeNow := utils.NewTime(nil)
-	if end == "" {
-		end = TimeNow.ToString()
-	}
-	if begin == "" {
-		// 10 秒的冗余还是太短了啊 没事的 10 秒也很厉害了
-		begin = TimeNow.Delay(-30).ToString()
-	}
-	Succeed(c, "posts", model.GetPosts(begin, end), "online", utils.Timer())
-}
+// func GetPosts(ctx *gin.Context) (any, group.Error) {
+// 	if _, ok := ctx.GetQuery("test"); ok {
+// 		Succeed(c, "posts", []model.Post{*model.TestPost}, "online", utils.Timer())
+// 		return
+// 	}
+// 	begin, end := c.Query("begin"), c.Query("end")
+// 	TimeNow := utils.NewTime(nil)
+// 	if end == "" {
+// 		end = TimeNow.ToString()
+// 	}
+// 	if begin == "" {
+// 		// 10 秒的冗余还是太短了啊 没事的 10 秒也很厉害了
+// 		begin = TimeNow.Delay(-30).ToString()
+// 	}
+// 	Succeed(c, "posts", dao.GetPosts(begin, end), "online", utils.Timer())
+// }
 
 // 获取所有分支
 // func GetBranches(c *gin.Context) {

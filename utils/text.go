@@ -24,11 +24,11 @@ func Clean(original string) string {
 	return doc.Text()
 }
 
-// 换行分割字符串
-func Cut(b []byte) (r []string) {
-	for _, s := range strings.Split(string(b), "\n") {
-		if s != "" {
-			r = append(r, s)
+func SplitLines(s string) (r []string) {
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			r = append(r, line)
 		}
 	}
 	return

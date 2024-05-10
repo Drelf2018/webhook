@@ -1,124 +1,138 @@
 package api
 
 import (
+	"errors"
 	"os"
-	"os/exec"
-	"runtime"
 	"strconv"
 
 	"github.com/Drelf2018/asyncio"
-	"github.com/Drelf2018/webhook/model"
+	group "github.com/Drelf2018/gin-group"
+	"github.com/Drelf2018/webhook/config"
+	"github.com/Drelf2018/webhook/database/dao"
+	"github.com/Drelf2018/webhook/database/model"
 	"github.com/Drelf2018/webhook/utils"
 	u20 "github.com/Drelf2020/utils"
 	"github.com/gin-gonic/gin"
 )
 
-type Admin int
+var (
+	ErrNoAdmin = errors.New("webhook/api: no administrator permission")
+)
 
-func (Admin) Use(c *gin.Context) {
-	if !User(c).IsAdmin() {
-		Abort(c, "您没有管理员权限")
+var Admin = group.Group{
+	Path:        "admin",
+	Middlewares: gin.HandlersChain{IsAdmin},
+	Handlers: group.Chain{
+		GetExec,
+		GetGet_users,
+		GetSet_permission,
+		GetLog,
+		GetRestart,
+		GetClear_public,
+		GetClear_root,
+		GetUpdate,
+		GetDownload_users,
+	},
+}
+
+func IsAdmin(ctx *gin.Context) {
+	if !group.GetUser[model.User](ctx).IsAdmin() {
+		group.Abort(ctx, nil, group.AutoError(ErrNoAdmin))
 	}
 }
 
-func Shell(s string, dir ...string) ([]string, error) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("cmd", "/C", s)
-	case "linux":
-		cmd = exec.Command("/bin/sh", "-c", s)
-	}
-	if len(dir) >= 1 {
-		cmd.Dir = dir[0]
-	}
-	b, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-	return utils.Cut(b), nil
+// 主动更新主页
+func GetUpdate(ctx *gin.Context) (any, group.Error) {
+	return config.Global.Github.SyncRepository().Error(), nil
 }
 
-func (Admin) GetExec_8cmd(c *gin.Context) {
-	s, err := Shell(c.Param("cmd")[1:])
-	if err != nil {
-		Abort(c, err)
-		return
-	}
-	Succeed(c, s)
+func GetExec(ctx *gin.Context) (any, group.Error) {
+	return WrapError(utils.RunShell(ctx.Query("cmd"), ctx.Query("dir")))
 }
 
-func (Admin) GetUsers(c *gin.Context) {
-	u, err := model.Users()
-	if err != nil {
-		Abort(c, err)
-		return
-	}
-	Succeed(c, u)
+func GetGet_users(ctx *gin.Context) (any, group.Error) {
+	return WrapError(dao.GetUsers())
 }
 
-func (Admin) GetPermission_1uid_1permission(c *gin.Context) {
-	permission := c.Param("permission")
-	f, err := strconv.ParseUint(permission, 10, 64)
-	if err != nil {
-		Abort(c, err, permission)
-		return
-	}
-
-	p := model.Permission(f)
-	err = User(c).Check(p)
-	if err != nil {
-		Abort(c, err, p)
-		return
-	}
-
-	uid := c.Param("uid")
-	err = model.UpdatePermission(uid, p)
-	if err != nil {
-		Abort(c, err, uid)
-		return
-	}
-	Succeed(c, "更新成功")
+func GetDownload_users(ctx *gin.Context) (any, group.Error) {
+	ctx.FileAttachment(config.Global.Path.FullPath.UserDB, "users.db")
+	return nil, nil
 }
 
-// 读取日志
-func (Admin) GetLog(c *gin.Context) {
-	b, err := os.ReadFile(".log")
-	if err != nil {
-		Abort(c, err)
-	}
-	Succeed(c, utils.Cut(b))
-}
+var ErrHasOwner = errors.New("webhook/api: there can only be one owner")
+var ErrAppoint1 = errors.New("webhook/api: only the owner can appoint the administrator")
+var ErrAppoint2 = errors.New("webhook/api: only the administrator can appoint others")
 
-func close(c *gin.Context) error {
-	err1 := u20.CloseLogFile()
-	if err1 != nil {
-		return err1
+func CheckPermission(p, n model.Permission) error {
+	if n.Has(model.Owner) {
+		return ErrHasOwner
 	}
-	err2, err3 := model.Close()
-	if err2 != nil {
-		return err2
+	if n.Has(model.Administrator) && !p.Has(model.Owner) {
+		return ErrAppoint1
 	}
-	if err3 != nil {
-		return err3
+	if !p.IsAdmin() {
+		return ErrAppoint2
 	}
-	Succeed(c, "人生有梦，各自精彩！")
-	asyncio.Delay(5, os.Exit, 0)
 	return nil
 }
 
-func (Admin) GetClose(c *gin.Context) {
-	close(c)
+func GetSet_permission(ctx *gin.Context) (any, group.Error) {
+	permission := ctx.Query("permission")
+	f, err := strconv.ParseUint(permission, 10, 64)
+	if err != nil {
+		return permission, group.AutoError(err)
+	}
+
+	p := model.Permission(f)
+	err = CheckPermission(group.GetUser[model.User](ctx).Permission, p)
+	if err != nil {
+		return p, group.AutoError(err)
+	}
+
+	uid := ctx.Query("uid")
+	err = dao.UpdatePermission(uid, p)
+	if err != nil {
+		return uid, group.AutoError(err)
+	}
+	return "更新成功", nil
 }
 
-func (Admin) GetClear(c *gin.Context) {
-	if close(c) == nil {
-		os.RemoveAll("./public")
+// 读取日志
+func GetLog(ctx *gin.Context) (any, group.Error) {
+	b, err := os.ReadFile(config.Global.Path.FullPath.Log)
+	if err != nil {
+		return nil, group.AutoError(err)
 	}
+	return utils.SplitLines(string(b)), nil
 }
 
-func (Admin) GetReboot(c *gin.Context) {
-	if close(c) == nil {
-		os.RemoveAll(".")
+func GetRestart(ctx *gin.Context) (any, group.Error) {
+	err := u20.CloseLogFile()
+	if err != nil {
+		return nil, group.AutoError(err)
 	}
+
+	err = dao.Close()
+	if err != nil {
+		return nil, group.AutoError(err)
+	}
+
+	asyncio.Delay(5, os.Exit, 0)
+	return "人生有梦，各自精彩！", nil
+}
+
+func GetClear_public(ctx *gin.Context) (data any, err group.Error) {
+	data, err = GetRestart(ctx)
+	if err == nil {
+		os.RemoveAll(config.Global.Path.FullPath.Public)
+	}
+	return
+}
+
+func GetClear_root(ctx *gin.Context) (data any, err group.Error) {
+	data, err = GetRestart(ctx)
+	if err == nil {
+		os.RemoveAll(config.Global.Path.FullPath.Root)
+	}
+	return
 }

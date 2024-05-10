@@ -1,53 +1,53 @@
 package api
 
 import (
-	"net/http"
 	"os"
-	"strings"
+	"runtime"
+	"time"
 
-	"github.com/Drelf2018/webhook/model"
-	"github.com/gin-contrib/static"
+	group "github.com/Drelf2018/gin-group"
+	"github.com/Drelf2018/request"
+	"github.com/Drelf2018/webhook/config"
+	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
-type Api struct {
-	Visitor
-	Submitter
-	Admin
-}
-
-// 解决跨域问题
-//
-// 参考: https://blog.csdn.net/u011866450/article/details/126958238
-func Cors(c *gin.Context) {
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-	c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Cache-Control, Content-Language, Content-Type")
-	c.Header("Access-Control-Allow-Credentials", "true")
-	// 禁止所有 OPTIONS 方法 原因见博文
-	if c.Request.Method == http.MethodOptions {
-		c.AbortWithStatus(http.StatusNoContent)
+func WrapError(data any, err error) (any, group.Error) {
+	if err == nil {
+		return data, nil
 	}
+	_, _, line, _ := runtime.Caller(1)
+	return data, group.NewError(line, err.Error())
 }
 
-func (Api) Use(r *gin.RouterGroup) {
-	r.Use(Cors)
-	r.Use(static.ServeRoot("/", "./views"))
-	r.Use(static.ServeRoot("/user", "./views"))
+var Api = group.Group{
+	Middlewares: gin.HandlersChain{group.CORS},
+	Customize: func(r gin.IRouter) {
+		r.StaticFS("/public", request.DefaultDownloadSystem(config.Global.Path.FullPath.Public))
+	},
+	Groups: []group.Group{Visitor, {
+		Middlewares: gin.HandlersChain{SetUser},
+		Groups:      []group.Group{Submitter, Admin},
+	}},
 }
 
-type fileSystem string
-
-func (fs fileSystem) Open(name string) (http.File, error) {
-	if !strings.HasPrefix(name, "/http") {
-		return http.Dir(fs).Open(name)
+func GetEngine() (*gin.Engine, error) {
+	file, err := os.OpenFile(config.Global.Path.FullPath.Log, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
+	if err != nil {
+		return nil, err
 	}
-	if _, err := os.Stat(model.ConvertURL(name)); err != nil {
-		model.Download(name[1:])
-	}
-	return http.Dir(fs).Open(model.CleanURL(name))
-}
 
-func (Api) StaticFSPublic() (string, http.FileSystem) {
-	return "/public", fileSystem("public")
+	log = &logrus.Logger{
+		Out: file,
+		Formatter: &nested.Formatter{
+			HideKeys:        true,
+			NoColors:        true,
+			TimestampFormat: time.DateTime,
+		},
+		Level: logrus.DebugLevel,
+	}
+
+	Api.Middlewares = append(Api.Middlewares, group.Static(config.Global.Path.FullPath.Views))
+	return group.Default(Api), nil
 }

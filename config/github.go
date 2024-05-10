@@ -2,91 +2,106 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/Drelf2018/request"
-	"github.com/Drelf2020/utils"
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"golang.org/x/exp/slices"
 )
 
 type Github struct {
-	Username   string `yaml:"username" default:"Drelf2018"`
+	Folder     string `yaml:"-"`
+	Username   string `yaml:"username"   default:"Drelf2018"`
 	Repository string `yaml:"repository" default:"gin.nana7mi.link"`
-	Branche    string `yaml:"branche" default:"gh-pages"`
+	Branche    string `yaml:"branche"    default:"gh-pages"`
 
-	Commit struct {
-		Sha string `json:"sha"`
-	} `json:"commit" yaml:"-"`
+	done chan int
 }
 
-func (g *Github) API() string {
+func (g *Github) Api() string {
 	return fmt.Sprintf("https://api.github.com/repos/%v/%v/branches/%v", g.Username, g.Repository, g.Branche)
 }
 
-func (g *Github) GIT() string {
-	return fmt.Sprintf("https://github.com/%v/%v.git", g.Username, g.Repository)
+func (g *Github) Git() string {
+	return fmt.Sprintf("https://github.com/%s/%s.git", g.Username, g.Repository)
 }
 
-func (g *Github) Sha() []byte {
-	return []byte(g.Commit.Sha)
+func (g *Github) ReferenceName() plumbing.ReferenceName {
+	return plumbing.ReferenceName("refs/heads/" + g.Branche)
 }
 
-// 获取最新提交
-func (g *Github) GetLatestCommit() error {
-	result := request.Get(g.API())
-	if result.Error() != nil {
-		return result.Error()
-	}
-	return result.Json(g)
+func (g *Github) RemoteName() plumbing.ReferenceName {
+	return plumbing.ReferenceName("refs/remotes/origin/" + g.Branche)
+}
+
+func (g Github) String() string {
+	return fmt.Sprintf("https://github.com/%s/%s/tree/%s", g.Username, g.Repository, g.Branche)
 }
 
 // 克隆到文件夹
-func (g *Github) Clone(folder string) error {
-	_, err := git.PlainClone(folder, false, &git.CloneOptions{
-		URL:           g.GIT(),
-		ReferenceName: plumbing.ReferenceName(g.Branche),
-		SingleBranch:  true,
-		Progress:      os.Stdout,
+func (g *Github) Clone() error {
+	_, err := git.PlainClone(g.Folder, false, &git.CloneOptions{
+		URL:           g.Git(),
+		ReferenceName: g.ReferenceName(),
 	})
+	if err == git.ErrRepositoryAlreadyExists {
+		return nil
+	}
 	return err
 }
 
-// 更新主页
-func (g *Github) UpdateIndex() error {
-	// 先获取最新版本
-	if err := g.GetLatestCommit(); err != nil {
+func (g *Github) ForcePull() error {
+	repo, _ := git.PlainOpen(g.Folder)
+	worktree, err := repo.Worktree()
+	if err != nil {
 		return err
 	}
-	var (
-		views   = "./views"
-		index   = "./views/index.html"
-		version = "./views/.version"
-	)
-	// 判断当前版本是否最新
-	if utils.FileExist(index) {
-		b, err := os.ReadFile(version)
-		if err == nil && slices.Equal(b, g.Sha()) {
-			return nil
-		}
-	}
-	// 再决定要不要克隆
-	os.RemoveAll(views)
-	if err := g.Clone(views); err != nil {
-		return err
-	}
-	return os.WriteFile(version, g.Sha(), os.ModePerm)
+	return worktree.Pull(&git.PullOptions{ReferenceName: g.ReferenceName()})
 }
 
-func (g *Github) MustUpdate(*Config) {
+func (g *Github) SyncRepository() error {
+	repo, err := git.PlainOpen(g.Folder)
+	if err != nil {
+		return err
+	}
+
+	err = repo.Fetch(&git.FetchOptions{})
+	if err == git.NoErrAlreadyUpToDate {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return err
+	}
+
+	err = worktree.Pull(&git.PullOptions{ReferenceName: g.ReferenceName()})
+	if err == git.NoErrAlreadyUpToDate {
+		return nil
+	}
+	return err
+}
+
+func (g *Github) AfterConfigGithub(c *Config) {
+	g.Folder = c.Path.FullPath.Views
+
 	go func() {
-		var err error = g.UpdateIndex()
-		for err != nil {
-			fmt.Printf("err: %v\n", err)
-			err = g.UpdateIndex()
+		i := 0
+		for g.Clone() != nil {
+			i++
 			time.Sleep(3 * time.Second)
 		}
+
+		if g.done != nil {
+			g.done <- i
+			close(g.done)
+		}
 	}()
+}
+
+func (g *Github) Done() int {
+	g.done = make(chan int)
+	return <-g.done
 }
