@@ -9,9 +9,13 @@ import (
 
 func TestConfig(t *testing.T) {
 	c := &config.Config{}
-	err := initial.Default(c)
+	err := initial.Initial(c)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Try to clone %d times", c.Github.Done())
+	t.Log(c)
+	err = c.Export()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
