@@ -13,21 +13,18 @@ jobs:
         goarch: [amd64] # 需要打包的架构
     steps:
       - uses: actions/checkout@v3
-      - name: Test
-        run: go test
-        working-directory: cmd/build
       - name: Generate
         run: |
           go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
           export PATH=$PATH:/home/runner/go/bin
           go generate
-        working-directory: cmd/build
+        working-directory: cmd/webhook
       - uses: wangyoucao577/go-release-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }} # 一个默认的变量，用来实现往 Release 中添加文件
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           goversion: https://go.dev/dl/go1.21.0.linux-amd64.tar.gz # 可以指定编译使用的 Golang 版本
-          project_path: cmd/build # 修改 go build 目录
+          project_path: cmd/webhook # 修改 go build 目录
           md5sum: false # 同时生成 md5 文件 这就没必要了
           compress_assets: OFF # 自动打包 不要！

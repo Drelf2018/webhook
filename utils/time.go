@@ -1,25 +1,15 @@
 package utils
 
-import (
-	"encoding/json"
-	"time"
+import "time"
 
-	"github.com/Drelf2018/intime"
-)
-
-type onlineList map[string]intime.Time
-
-func (o onlineList) MarshalJSON() ([]byte, error) {
-	now := time.Now().UnixMilli()
-	m := make(map[string]int64)
-	for uid, t := range o {
-		m[uid] = now - t.UnixMilli()
+func NextTimeDuration(hour, min, sec int) time.Duration {
+	now := time.Now()
+	next := time.Date(now.Year(), now.Month(), now.Day(), hour, min, sec, 0, now.Location())
+	switch {
+	case now.Hour() > hour,
+		now.Hour() == hour && now.Minute() > min,
+		now.Hour() == hour && now.Minute() == min && now.Second() > sec:
+		next = next.AddDate(0, 0, 1)
 	}
-	return json.Marshal(m)
+	return time.Until(next)
 }
-
-func (o onlineList) Update(uid string) {
-	o[uid] = intime.Now()
-}
-
-var OnlineList = make(onlineList)
