@@ -1,53 +1,77 @@
 package api
 
 import (
-	"os"
-	"runtime"
-	"time"
+	"net/http"
 
 	group "github.com/Drelf2018/gin-group"
-	"github.com/Drelf2018/request"
-	"github.com/Drelf2018/webhook/config"
-	nested "github.com/antonfisher/nested-logrus-formatter"
+	"github.com/Drelf2018/webhook"
+	"github.com/Drelf2018/webhook/file"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
-func WrapError(data any, err error) (any, group.Error) {
-	if err == nil {
-		return data, nil
-	}
-	_, _, line, _ := runtime.Caller(1)
-	return data, group.NewError(line, err.Error())
-}
-
-var Api = group.Group{
-	Middlewares: gin.HandlersChain{group.CORS},
-	Customize: func(r gin.IRouter) {
-		r.StaticFS("/public", request.DefaultDownloadSystem(config.Global.Path.FullPath.Public))
+var vistor = group.G{
+	Middleware: LogMiddleware,
+	CustomFunc: func(r gin.IRouter) {
+		fs := file.NewDownloader(webhook.Global().Path.Full.Public)
+		fs.Register(file.WeiboClient{})
+		r.StaticFS("/public", fs)
 	},
-	Groups: []group.Group{Visitor, {
-		Middlewares: gin.HandlersChain{SetUser},
-		Groups:      []group.Group{Submitter, Admin},
-	}},
+	Handlers: []group.H{
+		GetVersion,
+		GetOnline,
+		PostRegister,
+		GetToken,
+		GetUUID,
+		GetBlogs,
+		GetBlogID,
+	},
 }
 
-func GetEngine() (*gin.Engine, error) {
-	file, err := os.OpenFile(config.Global.Path.FullPath.Log, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
-	if err != nil {
-		return nil, err
-	}
+var user = group.G{
+	Path:       "user",
+	Middleware: IsUser,
+	Handlers: []group.H{
+		PostBlog,
+		PostTask,
+		GetTaskID,
+		PatchTaskID,
+		DeleteTaskID,
+		Get,
+		group.Wrapper(http.MethodPatch, "/:uid", PatchUser),
+		PostTest,
+		PostTests,
+	},
+}
 
-	log = &logrus.Logger{
-		Out: file,
-		Formatter: &nested.Formatter{
-			HideKeys:        true,
-			NoColors:        true,
-			TimestampFormat: time.DateTime,
-		},
-		Level: logrus.DebugLevel,
-	}
+var admin = group.G{
+	Path:       "admin",
+	Middleware: IsAdmin,
+	CustomFunc: func(r gin.IRouter) { r.StaticFS("/logs", http.Dir(webhook.Global().Path.Full.Logs)) },
+}
 
-	Api.Middlewares = append(Api.Middlewares, group.Static(config.Global.Path.FullPath.Views))
-	return group.Default(Api), nil
+var owner = group.G{
+	Path:       "owner",
+	Middleware: IsOwner,
+	CustomFunc: func(r gin.IRouter) { r.StaticFS("/root", http.Dir(webhook.Global().Path.Full.Root)) },
+	Handlers: []group.H{
+		GetExec,
+		GetUserUID,
+		GetShutdown,
+		DeletePublic,
+		DeleteFile,
+	},
+}
+
+var api = group.G{
+	Middleware: group.CORS,
+	Handlers:   []group.H{GetPing},
+	Groups:     []group.G{vistor, user, admin, owner},
+}
+
+func New() (r *gin.Engine) {
+	return api.New()
+}
+
+func Default() (r *gin.Engine) {
+	return api.Default()
 }
