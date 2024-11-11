@@ -11,28 +11,28 @@ import (
 )
 
 type TaskRunner struct {
-	DB      *gorm.DB
+	TaskDB  *gorm.DB
 	Timeout time.Duration
 
 	mu sync.Mutex
 }
 
-func (t *TaskRunner) FilterTasks(blog *model.Blog) (tasks []*model.Task, logs []model.RequestLog, err error) {
+func (t *TaskRunner) SendBlogWithContext(ctx context.Context, blog *model.Blog) error {
 	t.mu.Lock()
-	defer t.mu.Unlock()
 
-	matched := t.DB.Where(fmt.Sprintf(model.FilterQuery, blog.Submitter, blog.UID, blog.Type, blog.Platform))
-
+	matched := t.TaskDB.Where(fmt.Sprintf(model.FilterQuery, blog.Submitter, blog.UID, blog.Type, blog.Platform))
 	if !blog.Edited {
 		matched = matched.Not(model.ExceptQuery, blog.MID, blog.Type, blog.Platform)
 	}
 
-	err = matched.Find(&tasks).Error
-	if err != nil {
-		return
+	tasks := make([]*model.Task, 0)
+	err := matched.Find(&tasks).Error
+	if err != nil || len(tasks) == 0 {
+		t.mu.Unlock()
+		return err
 	}
 
-	logs = make([]model.RequestLog, len(tasks))
+	logs := make([]model.RequestLog, len(tasks))
 	for idx, task := range tasks {
 		logs[idx] = model.RequestLog{
 			TaskID:   task.ID,
@@ -43,28 +43,29 @@ func (t *TaskRunner) FilterTasks(blog *model.Blog) (tasks []*model.Task, logs []
 		}
 	}
 
-	err = t.DB.Create(logs).Error
-	return
-}
-
-func (t *TaskRunner) SendBlogWithContext(ctx context.Context, blog *model.Blog) error {
-	tasks, logs, err := t.FilterTasks(blog)
-	if err != nil || len(tasks) == 0 {
+	err = t.TaskDB.Create(logs).Error
+	t.mu.Unlock()
+	if err != nil {
 		return err
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, t.Timeout)
 	tmpl := model.NewTemplate(blog)
 	wg := &sync.WaitGroup{}
 	wg.Add(len(tasks))
 	for idx := range tasks {
 		go func(idx int) {
-			logs[idx].Result, logs[idx].Error = tasks[idx].Api.DoWithContext(ctx, tmpl)
+			r, err := tasks[idx].Api.DoWithContext(ctx, tmpl)
+			logs[idx].Result = string(r)
+			if err != nil {
+				logs[idx].Error = err.Error()
+			}
 			wg.Done()
 		}(idx)
 	}
 	wg.Wait()
 	cancel()
-	return t.DB.Save(logs).Error
+	return t.TaskDB.Save(logs).Error
 }
 
 func (t *TaskRunner) SendBlog(blog *model.Blog) error {
