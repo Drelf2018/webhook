@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/lib/pq"
 )
@@ -17,6 +16,31 @@ import (
 const MagicKey string = "__magic_key__"
 
 type Header http.Header
+
+func (h Header) Wrap() error {
+	if len(h) == 0 {
+		h[MagicKey] = []string{}
+	} else {
+		b, err := json.Marshal(http.Header(h))
+		if err != nil {
+			return err
+		}
+		for key := range h {
+			delete(h, key)
+		}
+		h[MagicKey] = []string{string(b)}
+	}
+	return nil
+}
+
+func (h Header) Unwrap() error {
+	v, ok := h[MagicKey]
+	if !ok || len(v) == 0 {
+		return nil
+	}
+	delete(h, MagicKey)
+	return json.Unmarshal([]byte(v[0]), &h)
+}
 
 func (Header) GormDataType() string {
 	return "TEXT"
@@ -42,17 +66,44 @@ func (h Header) Value() (driver.Value, error) {
 	if h == nil {
 		return "{}", nil
 	}
-	return json.Marshal(h)
+	if _, ok := h[MagicKey]; ok {
+		err := h.Unwrap()
+		if err != nil {
+			return nil, err
+		}
+	}
+	b, err := json.Marshal(http.Header(h))
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
 }
 
-func (h Header) String() string {
+func (h Header) MarshalJSON() ([]byte, error) {
+	if h == nil {
+		return nil, nil
+	}
+	if len(h) == 0 {
+		return []byte("{}"), nil
+	}
+	v, ok := h[MagicKey]
+	if !ok {
+		return json.Marshal(http.Header(h))
+	}
+	if len(v) == 0 {
+		return []byte("{}"), nil
+	}
+	return []byte(v[0]), nil
+}
+
+func (h Header) ToString() string {
 	if h == nil {
 		return "{}"
 	}
 	v, ok := h[MagicKey]
 	if !ok {
 		if len(h) != 0 {
-			b, err := json.Marshal(h)
+			b, err := json.Marshal(http.Header(h))
 			if err == nil {
 				return string(b)
 			}
@@ -65,29 +116,6 @@ func (h Header) String() string {
 	return v[0]
 }
 
-func (h Header) Lookup(key string) (string, bool) {
-	if h == nil {
-		return "", false
-	}
-	v, ok := h[MagicKey]
-	if !ok {
-		if len(h) == 0 {
-			return "", false
-		}
-		values, ok := h[key]
-		if !ok {
-			return "", false
-		}
-		return strings.Join(values, ","), true
-	}
-	newHeader := make(Header)
-	err := json.Unmarshal([]byte(v[0]), &newHeader)
-	if err != nil {
-		return "", false
-	}
-	return newHeader.Lookup(key)
-}
-
 const (
 	doNotUnmarshal string = "DoNotUnmarshal"
 	DoNotUnmarshal        = "--" + doNotUnmarshal
@@ -96,11 +124,11 @@ const (
 type Api struct {
 	Method    string         `json:"method"`
 	URL       string         `json:"url"`
-	Body      string         `json:"data"`
+	Body      string         `json:"body"`
 	Header    Header         `json:"header"`
 	Parameter pq.StringArray `json:"parameter" gorm:"type:text[]"`
 
-	DoNotUnmarshal bool `gorm:"-"`
+	doNotUnmarshal bool `gorm:"-"`
 }
 
 func (api *Api) Parse() error {
@@ -108,7 +136,7 @@ func (api *Api) Parse() error {
 		return nil
 	}
 	set := flag.NewFlagSet("api", flag.ContinueOnError)
-	set.BoolVar(&api.DoNotUnmarshal, doNotUnmarshal, false, doNotUnmarshal)
+	set.BoolVar(&api.doNotUnmarshal, doNotUnmarshal, false, doNotUnmarshal)
 	return set.Parse(api.Parameter)
 }
 
@@ -131,7 +159,7 @@ func (api Api) DoWithContext(ctx context.Context, tmpl *Template) (result []byte
 
 	if api.Body == "" {
 		body = nil
-	} else if api.DoNotUnmarshal {
+	} else if api.doNotUnmarshal {
 		body, err = tmpl.Reader(api.Body)
 	} else {
 		var i any
@@ -163,7 +191,7 @@ func (api Api) DoWithContext(ctx context.Context, tmpl *Template) (result []byte
 		return
 	}
 
-	header, err := tmpl.Reader(api.Header.String())
+	header, err := tmpl.Reader(api.Header.ToString())
 	if err != nil {
 		return
 	}

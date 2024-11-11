@@ -50,24 +50,24 @@ type Blog struct {
 }
 
 func (b *Blog) BeforeCreate(tx *gorm.DB) error {
+	b.ID = 0
+	b.CreatedAt = time.Time{}
 	if b.Reply != nil {
 		b.Reply.Submitter = b.Submitter
 	}
-	for i := range b.Comments {
-		b.Comments[i].Submitter = b.Submitter
-	}
+	b.Comments = nil
 	return nil
 }
 
-const maxTextLength = 18
+var MaxTextLength = 18
 
-func (b *Blog) String() string {
+func (b Blog) String() string {
 	text := b.Text
-	if len(text) > maxTextLength {
-		text = text[:maxTextLength] + "..."
+	if len(text) > MaxTextLength {
+		text = text[:MaxTextLength] + "..."
 	}
 	if b.Reply == nil {
-		return fmt.Sprintf("Blog(%s, %s)", b.Name, text)
+		return fmt.Sprintf("Blog(%d, %s, %s)", b.ID, b.Name, text)
 	}
-	return fmt.Sprintf("Blog(%s, %s, %s)", b.Name, text, b.Reply)
+	return fmt.Sprintf("Blog(%d, %s, %s, %s)", b.ID, b.Name, text, b.Reply)
 }
