@@ -4,10 +4,10 @@ import (
 	"errors"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"sync"
 
 	"github.com/Drelf2018/initial"
-	"golang.org/x/exp/slices"
 )
 
 type Node struct {
@@ -23,8 +23,8 @@ func (n *Node) Depth() int {
 }
 
 var (
-	ErrInvalidName = errors.New("fullpath: invalid join tag value")
-	ErrNotPointer  = errors.New("fullpath: value must be a pointer to struct")
+	ErrInvalidName = errors.New("webhook/utils: invalid join tag value")
+	ErrNotPointer  = errors.New("webhook/utils: value must be a pointer to struct")
 )
 
 var edgesCache sync.Map
@@ -81,17 +81,16 @@ func ParseEdges(elem reflect.Type) (edges [][2]int) {
 		}
 	}
 
-	slices.SortFunc(edges, func(a, b [2]int) (i int) {
-		i = nodes[a[0]].Depth() - nodes[b[0]].Depth()
-		if i == 0 {
-			i = a[1] - b[1]
+	sort.Slice(edges, func(i, j int) bool {
+		less := nodes[edges[i][0]].Depth() - nodes[edges[j][0]].Depth()
+		if less == 0 {
+			less = edges[i][1] - edges[j][1]
 		}
-		if i == 0 {
-			i = a[0] - b[0]
+		if less == 0 {
+			less = edges[i][0] - edges[j][0]
 		}
-		return
+		return less < 0
 	})
-
 	return
 }
 
