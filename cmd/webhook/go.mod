@@ -7,7 +7,6 @@ go 1.18
 require (
 	github.com/Drelf2018/initial v0.9.0
 	github.com/Drelf2018/webhook v0.0.0-00010101000000-000000000000
-	github.com/dchest/uniuri v1.2.0
 	github.com/gin-gonic/gin v1.10.0
 )
 
