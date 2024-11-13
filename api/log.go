@@ -52,21 +52,9 @@ func Error(ctx *gin.Context, err error) {
 func LogMiddleware(ctx *gin.Context) {
 	ctx.Next()
 	if len(ctx.Errors) != 0 {
-		// ctx.Abort()
-		// c.JSON(code, jsonObj)
 		Error(ctx, ctx.Errors.Last())
 		ctx.Errors = nil
 	} else {
 		Info(ctx)
 	}
 }
-
-// func LogUIDMiddleware(ctx *gin.Context) {
-// 	ctx.Next()
-// 	if len(ctx.Errors) == 0 {
-// 		InfoUID(ctx, GetUID(ctx))
-// 		return
-// 	}
-// 	ErrorUID(ctx, ctx.Errors.Last(), GetUID(ctx))
-// 	ctx.Errors = nil
-// }

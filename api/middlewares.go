@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// const MagicRoleKey string = "__magic_role_key__"
 const MagicUIDKey string = "__magic_uid_key__"
 
 var (
