@@ -32,6 +32,12 @@ func GetVersion(ctx *gin.Context) (any, error) {
 	return Version, nil
 }
 
+// 检验鉴权码是否有效
+func GetValid(ctx *gin.Context) (any, error) {
+	_, err := JWTAuth(ctx)
+	return err == nil, nil
+}
+
 // 更新在线时间
 func GetPing(ctx *gin.Context) (any, error) {
 	uid, err := JWTAuth(ctx)

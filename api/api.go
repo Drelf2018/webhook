@@ -18,6 +18,7 @@ var vistor = group.G{
 	},
 	Handlers: []group.H{
 		GetVersion,
+		GetValid,
 		GetOnline,
 		PostRegister,
 		GetToken,
@@ -59,6 +60,7 @@ var owner = group.G{
 		GetShutdown,
 		DeletePublic,
 		DeleteFile,
+		DeleteRoot,
 	},
 }
 
