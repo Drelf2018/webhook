@@ -65,5 +65,15 @@ func CloseDB() error {
 	} else {
 		errs = append(errs, blogDB.Close())
 	}
-	return errors.Join(errs...)
+
+	var s string
+	for _, err := range errs {
+		if err != nil {
+			s += err.Error()
+		}
+	}
+	if s == "" {
+		return nil
+	}
+	return errors.New(s)
 }

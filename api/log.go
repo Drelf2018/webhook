@@ -2,7 +2,6 @@ package api
 
 import (
 	"path/filepath"
-	"time"
 
 	"github.com/Drelf2018/webhook"
 	"github.com/Drelf2018/webhook/utils"
@@ -23,7 +22,7 @@ func Log() *logrus.Logger {
 			Formatter: &nested.Formatter{
 				HideKeys:        true,
 				NoColors:        true,
-				TimestampFormat: time.TimeOnly,
+				TimestampFormat: "15:04:05",
 				ShowFullLevel:   true,
 			},
 			Level: logrus.DebugLevel,
