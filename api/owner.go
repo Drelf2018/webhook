@@ -38,7 +38,7 @@ func GetShutdown(ctx *gin.Context) (any, error) {
 func DeletePublic(ctx *gin.Context) (data any, err error) {
 	data, err = GetShutdown(ctx)
 	if err == nil {
-		os.RemoveAll(webhook.Global().Path.Full.Public)
+		err = os.RemoveAll(webhook.Global().Path.Full.Public)
 	}
 	return
 }
@@ -49,4 +49,12 @@ func DeleteFile(ctx *gin.Context) (data any, err error) {
 		return 1, err
 	}
 	return "success", nil
+}
+
+func DeleteRoot(ctx *gin.Context) (data any, err error) {
+	data, err = GetShutdown(ctx)
+	if err == nil {
+		err = os.RemoveAll(webhook.Global().Path.Full.Root)
+	}
+	return
 }
