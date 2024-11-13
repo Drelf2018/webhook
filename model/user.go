@@ -49,6 +49,7 @@ type RequestLog struct {
 // 任务
 type Task struct {
 	ID          uint64         `json:"id" gorm:"primaryKey;autoIncrement"`
+	CreatedAt   time.Time      `json:"created_at"`
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
 	Enable      bool           `json:"enable"`
 	UserID      string         `json:"user_id"`
@@ -61,12 +62,13 @@ type Task struct {
 
 // 用户
 type User struct {
-	Role     Role           `json:"role"` // 权限等级
-	Ban      time.Time      `json:"ban"`  // 封禁结束时间
-	UID      string         `json:"uid" gorm:"primaryKey"`
-	Name     string         `json:"name"`
-	Nickname string         `json:"nickname"` // 权限昵称
-	Password string         `json:"-"`
-	Tasks    []Task         `json:"tasks"`
-	Extra    map[string]any `json:"-" gorm:"serializer:json"` // 预留项
+	UID       string         `json:"uid" gorm:"primaryKey"`
+	CreatedAt time.Time      `json:"created_at"`
+	Ban       time.Time      `json:"ban"`  // 封禁结束时间
+	Role      Role           `json:"role"` // 权限等级
+	Name      string         `json:"name"`
+	Nickname  string         `json:"nickname"` // 权限昵称
+	Password  string         `json:"-"`
+	Tasks     []Task         `json:"tasks"`
+	Extra     map[string]any `json:"-" gorm:"serializer:json"` // 预留项
 }
