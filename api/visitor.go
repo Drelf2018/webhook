@@ -14,7 +14,7 @@ import (
 	_ "unsafe"
 )
 
-const Version = "v0.15.1"
+const Version = "v0.16.0"
 
 var (
 	ErrUserRegistered = errors.New("webhook/api: user registered")
