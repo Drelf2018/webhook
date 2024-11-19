@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -25,6 +26,7 @@ type PatchBody struct {
 	From  string `json:"from,omitempty"`
 }
 
+// 修改用户信息
 func PatchUser(ctx *gin.Context) (any, error) {
 	var body []PatchBody
 	err := ctx.ShouldBindJSON(&body)
@@ -53,10 +55,13 @@ func PatchUser(ctx *gin.Context) (any, error) {
 		switch patch.Path {
 		default:
 			err = ErrInvalidPath
-		case "/role":
-			err = PatchUserRole(ctx, me, user, patch)
 		case "/ban":
 			err = PatchUserBan(ctx, me, user, patch)
+			if user.Ban.After(time.Now()) {
+				tokenIssuedAt.Delete(user.UID)
+			}
+		case "/role":
+			err = PatchUserRole(ctx, me, user, patch)
 		case "/name":
 			err = PatchUserName(ctx, me, user, patch)
 		case "/nickname":
@@ -66,15 +71,44 @@ func PatchUser(ctx *gin.Context) (any, error) {
 			errs = append(errs, group.Response{Code: i, Error: err.Error()})
 		}
 	}
-	if len(errs) != 0 {
+
+	switch len(errs) {
+	case 0:
+		err = UserDB().Save(user).Error
+		if err != nil {
+			return 5, err
+		}
+		return "success", nil
+	case 1:
+		return 6, fmt.Errorf("webhook/api: operate#%d error: %s", errs[0].Code, errs[0].Error)
+	default:
 		return errs, group.E(5, ErrMultipleErr)
 	}
+}
 
-	err = UserDB().Save(user).Error
-	if err != nil {
-		return 6, err
+func PatchUserBan(ctx *gin.Context, me, user *model.User, patch PatchBody) error {
+	if !me.Role.IsAdmin() {
+		return ErrPermDenied
 	}
-	return "success", nil
+	if me.Role <= user.Role {
+		return ErrPermDenied
+	}
+	switch patch.Op {
+	case "replace":
+		return user.Ban.UnmarshalJSON([]byte(patch.Value))
+	case "add":
+		i, err := strconv.Atoi(patch.Value)
+		if err != nil {
+			return err
+		}
+		user.Ban = user.Ban.Add(time.Duration(i))
+		return nil
+	case "remove":
+		user.Ban = time.Time{}
+		return nil
+	default:
+		return ErrInvalidOp
+	}
 }
 
 func PatchUserRole(ctx *gin.Context, me, user *model.User, patch PatchBody) error {
@@ -94,36 +128,6 @@ func PatchUserRole(ctx *gin.Context, me, user *model.User, patch PatchBody) erro
 			return ErrPermDenied
 		}
 		user.Role = model.Role(i)
-		return nil
-	default:
-		return ErrInvalidOp
-	}
-}
-
-func PatchUserBan(ctx *gin.Context, me, user *model.User, patch PatchBody) error {
-	if !me.Role.IsAdmin() {
-		return ErrPermDenied
-	}
-	if me.Role <= user.Role {
-		return ErrPermDenied
-	}
-	defer func() {
-		if user.Ban.After(time.Now()) {
-			tokenIssuedAt.Delete(user.UID)
-		}
-	}()
-	switch patch.Op {
-	case "replace":
-		return user.Ban.UnmarshalJSON([]byte(patch.Value))
-	case "add":
-		i, err := strconv.Atoi(patch.Value)
-		if err != nil {
-			return err
-		}
-		user.Ban = user.Ban.Add(time.Duration(i))
-		return nil
-	case "remove":
-		user.Ban = time.Time{}
 		return nil
 	default:
 		return ErrInvalidOp
@@ -162,6 +166,7 @@ func PatchUserNickname(ctx *gin.Context, me, user *model.User, patch PatchBody) 
 	}
 }
 
+// 修改任务
 func PatchTaskID(ctx *gin.Context) (any, error) {
 	var body []PatchBody
 	err := ctx.ShouldBindJSON(&body)
@@ -170,17 +175,15 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 	}
 
 	task := &model.Task{}
-	tx := UserDB().Limit(1).Find(task, "id = ? AND user_id = ?", ctx.Param("id"), GetUID(ctx))
+	tx := UserDB().Preload("Filters").Limit(1).Find(task, "id = ? AND user_id = ?", ctx.Param("id"), GetUID(ctx))
 	if tx.Error != nil {
 		return 2, tx.Error
 	}
 	if tx.RowsAffected == 0 {
 		return 3, ErrTaskNotExist
 	}
-	err = task.Api.Header.Unwrap()
-	if err != nil {
-		return 4, err
-	}
+	filters := task.Filters
+	task.Filters = nil
 
 	var errs []group.Response
 	for i, patch := range body {
@@ -188,42 +191,63 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 		switch patch.Path {
 		default:
 			err = ErrInvalidPath
+		case "/enable":
+			task.Enable, err = strconv.ParseBool(patch.Value)
 		case "/name":
 			task.Name = patch.Value
 		case "/method":
-			task.Api.Method = patch.Value
+			task.Method = patch.Value
 		case "/url":
-			task.Api.URL = patch.Value
+			task.URL = patch.Value
 		case "/body":
-			task.Api.Body = patch.Value
-		case "/enable":
-			task.Enable, err = strconv.ParseBool(patch.Value)
-		case "/request_once":
-			task.RequestOnce, err = strconv.ParseBool(patch.Value)
+			task.Body = patch.Value
 		case "/header":
-			err = json.Unmarshal([]byte(patch.Value), &task.Api.Header)
-		case "/parameter":
-			err = json.Unmarshal([]byte(patch.Value), &task.Api.Parameter)
-		case "/submitter":
-			err = json.Unmarshal([]byte(patch.Value), &task.Filter.Submitter)
-		case "/platform":
-			err = json.Unmarshal([]byte(patch.Value), &task.Filter.Platform)
-		case "/type":
-			err = json.Unmarshal([]byte(patch.Value), &task.Filter.Type)
-		case "/uid":
-			err = json.Unmarshal([]byte(patch.Value), &task.Filter.UID)
+			var header model.Header
+			err = json.Unmarshal([]byte(patch.Value), &header)
+			task.Header = header
+		case "/README":
+			task.README = patch.Value
+		case "/filters":
+			switch patch.Op {
+			case "replace":
+				var filter model.Filter
+				err = json.Unmarshal([]byte(patch.Value), &filter)
+				if err == nil {
+					filter.TaskID = task.ID
+					for idx := range filters {
+						if filters[idx].ID == filter.ID {
+							err = UserDB().Save(&filter).Error
+							break
+						}
+					}
+				}
+			case "add":
+				var filter model.Filter
+				err = json.Unmarshal([]byte(patch.Value), &filter)
+				if err == nil {
+					filter.ID = 0
+					filter.TaskID = task.ID
+					err = UserDB().Create(&filter).Error
+				}
+			case "remove":
+				err = UserDB().Delete(&model.Filter{}, "id = ? AND task_id = ?", patch.Value, task.ID).Error
+			}
 		}
 		if err != nil {
 			errs = append(errs, group.Response{Code: i, Error: err.Error()})
 		}
 	}
-	if len(errs) != 0 {
-		return errs, group.E(4, ErrMultipleErr)
-	}
 
-	err = UserDB().Save(task).Error
-	if err != nil {
-		return 5, err
+	switch len(errs) {
+	case 0:
+		err = UserDB().Save(task).Error
+		if err != nil {
+			return 4, err
+		}
+		return "success", nil
+	case 1:
+		return 5, fmt.Errorf("webhook/api: operate#%d error: %s", errs[0].Code, errs[0].Error)
+	default:
+		return errs, group.E(6, ErrMultipleErr)
 	}
-	return "success", nil
 }

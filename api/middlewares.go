@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const MagicUIDKey string = "__magic_uid_key__"
+const MagicUIDKey string = "_magic_uid_key_"
 
 var (
 	ErrNotAdmin = errors.New("webhook/api: no administrator permission")

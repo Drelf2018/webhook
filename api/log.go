@@ -34,17 +34,17 @@ func Log() *logrus.Logger {
 
 func Info(ctx *gin.Context) {
 	if value, exists := ctx.Get(MagicUIDKey); exists {
-		Log().Infof(`%s %s "%s" (%s)`, ctx.RemoteIP(), ctx.Request.Method, ctx.Request.URL, value)
+		Log().Infof(`%s %s "%s" (%s)`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL, value)
 	} else {
-		Log().Infof(`%s %s "%s"`, ctx.RemoteIP(), ctx.Request.Method, ctx.Request.URL)
+		Log().Infof(`%s %s "%s"`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL)
 	}
 }
 
 func Error(ctx *gin.Context, err error) {
 	if value, exists := ctx.Get(MagicUIDKey); exists {
-		Log().Errorf(`%s %s "%s": %s (%s)`, ctx.RemoteIP(), ctx.Request.Method, ctx.Request.URL, err, value)
+		Log().Errorf(`%s %s "%s": %s (%s)`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL, err, value)
 	} else {
-		Log().Errorf(`%s %s "%s": %s`, ctx.RemoteIP(), ctx.Request.Method, ctx.Request.URL, err)
+		Log().Errorf(`%s %s "%s": %s`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL, err)
 	}
 }
 

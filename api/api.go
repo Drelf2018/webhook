@@ -13,16 +13,17 @@ var vistor = group.G{
 	Middleware: LogMiddleware,
 	CustomFunc: func(r gin.IRouter) {
 		fs := file.NewDownloader(webhook.Global().Path.Full.Public)
-		fs.Register(file.WeiboClient{})
-		r.StaticFS("/public", fs)
+		handler := gin.WrapH(http.StripPrefix("/public", fs))
+		r.GET("/public/*filepath", handler)
+		r.HEAD("/public/*filepath", handler)
 	},
 	Handlers: []group.H{
 		GetVersion,
-		GetValid,
 		GetOnline,
 		PostRegister,
 		GetToken,
 		GetUUID,
+		PostFilter,
 		GetBlogs,
 		GetBlogID,
 	},
@@ -55,8 +56,7 @@ var owner = group.G{
 	Middleware: IsOwner,
 	CustomFunc: func(r gin.IRouter) { r.StaticFS("/root", http.Dir(webhook.Global().Path.Full.Root)) },
 	Handlers: []group.H{
-		GetExec,
-		GetUserUID,
+		GetExecute,
 		GetShutdown,
 		DeletePublic,
 		DeleteFile,
@@ -66,7 +66,7 @@ var owner = group.G{
 
 var api = group.G{
 	Middleware: group.CORS,
-	Handlers:   []group.H{GetPing},
+	Handlers:   []group.H{GetValid, GetPing},
 	Groups:     []group.G{vistor, user, admin, owner},
 }
 
