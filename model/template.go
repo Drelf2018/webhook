@@ -2,14 +2,17 @@ package model
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
+	"net/http"
 	"reflect"
+	"sync"
 	"text/template"
+	"time"
 )
 
 var root = template.New("root").Funcs(template.FuncMap{
-	"jsonBytes": json.Marshal,
 	"json": func(v any) (string, error) {
 		b, err := json.Marshal(v)
 		return string(b), err
@@ -17,6 +20,7 @@ var root = template.New("root").Funcs(template.FuncMap{
 })
 
 type Template struct {
+	id   uint64
 	data reflect.Value
 }
 
@@ -38,36 +42,84 @@ func (t *Template) String(text string) (string, error) {
 	return string(b), err
 }
 
-func (t *Template) Any(i any) (err error) {
-	switch i := i.(type) {
-	case map[string]any:
-		for k, v := range i {
-			s, ok := v.(string)
-			if ok {
-				i[k], err = t.String(s)
-			} else {
-				err = t.Any(v)
-			}
-			if err != nil {
-				return
-			}
-		}
-	case []any:
-		for idx, v := range i {
-			s, ok := v.(string)
-			if ok {
-				i[idx], err = t.String(s)
-			} else {
-				err = t.Any(v)
-			}
-			if err != nil {
-				return
-			}
+func (t *Template) DoWithContext(ctx context.Context, task *Task) (result []byte, err error) {
+	url, err := t.String(task.URL)
+	if err != nil {
+		return
+	}
+
+	var body io.Reader
+	if task.Body != "" {
+		body, err = t.Reader(task.Body)
+		if err != nil {
+			return
 		}
 	}
-	return nil
+
+	req, err := http.NewRequestWithContext(ctx, task.Method, url, body)
+	if err != nil {
+		return
+	}
+
+	header, err := t.Reader(task.Header.String())
+	if err != nil {
+		return
+	}
+
+	var h map[string]string
+	err = json.NewDecoder(header).Decode(&h)
+	if err != nil {
+		return
+	}
+
+	for k, v := range h {
+		req.Header.Add(k, v)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	return io.ReadAll(resp.Body)
 }
 
-func NewTemplate(data any) *Template {
-	return &Template{data: reflect.ValueOf(data)}
+func (t *Template) RunTask(ctx context.Context, task *Task) RequestLog {
+	r, err := t.DoWithContext(ctx, task)
+	log := RequestLog{
+		CreatedAt: time.Now(),
+		TaskID:    task.ID,
+		BlogID:    t.id,
+	}
+	if err != nil {
+		log.Error = err.Error()
+		return log
+	}
+	err = json.Unmarshal(r, &log.Result)
+	if err != nil {
+		log.RawResult = string(r)
+		log.Error = err.Error()
+		return log
+	}
+	return log
+}
+
+func (t *Template) RunTasks(ctx context.Context, tasks []*Task) []RequestLog {
+	logs := make([]RequestLog, len(tasks))
+	wg := &sync.WaitGroup{}
+	wg.Add(len(tasks))
+	for idx := range tasks {
+		idx := idx
+		go func() {
+			logs[idx] = t.RunTask(ctx, tasks[idx])
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	return logs
+}
+
+func NewTemplate(blog *Blog) *Template {
+	return &Template{id: blog.ID, data: reflect.ValueOf(blog)}
 }

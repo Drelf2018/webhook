@@ -3,9 +3,21 @@ package model
 import (
 	"time"
 
-	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
+
+// 用户
+type User struct {
+	UID       string         `json:"uid" gorm:"primaryKey"`
+	CreatedAt time.Time      `json:"created_at"`
+	Ban       time.Time      `json:"ban"`                      // 封禁结束时间
+	Role      Role           `json:"role"`                     // 权限等级
+	Name      string         `json:"name"`                     // 用户名 非必要不可变
+	Nickname  string         `json:"nickname"`                 // 昵称 可变
+	Password  string         `json:"-"`                        // 密码 不可变
+	Extra     map[string]any `json:"-" gorm:"serializer:json"` // 预留项
+	Tasks     []Task         `json:"tasks"`                    // 任务集
+}
 
 const (
 	Invalid Role = iota
@@ -21,54 +33,73 @@ func (r Role) IsAdmin() bool {
 	return r == Owner || r == Admin
 }
 
-const (
-	FilterQuery string = "enable AND (submitter IS NULL OR submitter = '' OR submitter = '{}' OR submitter LIKE '%%%s%%') AND (uid IS NULL OR uid = '' OR uid = '{}' OR uid LIKE '%%%s%%') AND (type IS NULL OR type = '' OR type = '{}' OR type LIKE '%%%s%%') AND (platform IS NULL OR platform = '' OR platform = '{}' OR platform LIKE '%%%s%%') "
-	ExceptQuery string = "request_once AND EXISTS (SELECT 1 FROM request_logs WHERE task_id = tasks.id AND mid = ? AND type = ? AND platform = ? LIMIT 1)"
-)
+// 任务
+type Task struct {
+	ID        uint64         `json:"id" gorm:"primaryKey;autoIncrement"`
+	CreatedAt time.Time      `json:"created_at"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 
+	Public bool   `json:"public"`  // 是否公开
+	Enable bool   `json:"enable"`  // 是否启用
+	Name   string `json:"name"`    // 任务名称
+	Method string `json:"method"`  // 请求方法
+	URL    string `json:"url"`     // 请求地址
+	Body   string `json:"body"`    // 请求内容
+	Header Header `json:"header"`  // 请求头部
+	README string `json:"README"`  // 任务描述
+	ForkID uint64 `json:"fork_id"` // 复刻来源
+
+	ForkCount int `json:"fork_count" gorm:"-"` // 被复刻次数
+
+	Filters []Filter     `json:"filters"` // 筛选条件
+	Logs    []RequestLog `json:"logs"`    // 请求记录
+	UserID  string       `json:"user_id"` // 外键
+}
+
+func (t *Task) BeforeCreate(*gorm.DB) error {
+	t.ID = 0
+	t.CreatedAt = time.Time{}
+	t.Logs = nil
+	return nil
+}
+
+func (t *Task) AfterFind(tx *gorm.DB) error {
+	return tx.Model(&Task{}).Select("count(*)").Find(&t.ForkCount, "fork_id = ?", t.ID).Error
+}
+
+// 博文筛选条件，用来描述一类博文，例如：
+//
+// filter1 表示所有平台为 "weibo"、类型为 "comment" 的博文
+//
+// filter2 表示所有由 "114" 提交的用户 "514" 的博文
+//
+//	var filter1 = Filter{
+//		Platform: "weibo",
+//		Type: "comment",
+//	}
+//
+//	var filter2 = Filter{
+//		Submitter: "114",
+//		UID: "514",
+//	}
 type Filter struct {
-	Submitter pq.StringArray `json:"submitter" gorm:"type:text[]"`
-	Platform  pq.StringArray `json:"platform" gorm:"type:text[]"`
-	Type      pq.StringArray `json:"type" gorm:"type:text[]"`
-	UID       pq.StringArray `json:"uid" gorm:"type:text[]"`
+	ID        uint64 `json:"id" gorm:"primaryKey;autoIncrement"`
+	Submitter string `json:"submitter"` // 提交者
+	Platform  string `json:"platform"`  // 发布平台
+	Type      string `json:"type"`      // 博文类型
+	UID       string `json:"uid"`       // 账户序号
+	TaskID    uint64 `json:"-"`         // 外键
 }
 
 // 请求记录
 type RequestLog struct {
 	ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 	CreatedAt time.Time `json:"created_at"`
-	TaskID    uint64    `json:"task_id" gorm:"index:idx_logs_query"`
-	BlogID    uint64    `json:"blog_id"`
-	MID       string    `json:"mid" gorm:"index:idx_logs_query;column:mid"`
-	Type      string    `json:"type" gorm:"index:idx_logs_query"`
-	Platform  string    `json:"platform" gorm:"index:idx_logs_query"`
-	Result    string    `json:"result"`
-	Error     string    `json:"error"`
-}
 
-// 任务
-type Task struct {
-	ID          uint64         `json:"id" gorm:"primaryKey;autoIncrement"`
-	CreatedAt   time.Time      `json:"created_at"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
-	Enable      bool           `json:"enable"`
-	UserID      string         `json:"user_id"`
-	Name        string         `json:"name"`
-	Filter      Filter         `json:"filter" gorm:"embedded"`
-	Api         Api            `json:"api" gorm:"embedded"`
-	RequestOnce bool           `json:"request_once"`
-	RequestLogs []RequestLog   `json:"request_logs,omitempty"`
-}
+	RawResult string `json:"raw_result"`                    // 响应纯文本
+	Result    any    `json:"result" gorm:"serializer:json"` // 响应为 JSON 会自动解析
+	Error     string `json:"error"`                         // 请求过程中发生的错误
 
-// 用户
-type User struct {
-	UID       string         `json:"uid" gorm:"primaryKey"`
-	CreatedAt time.Time      `json:"created_at"`
-	Ban       time.Time      `json:"ban"`  // 封禁结束时间
-	Role      Role           `json:"role"` // 权限等级
-	Name      string         `json:"name"`
-	Nickname  string         `json:"nickname"` // 权限昵称
-	Password  string         `json:"-"`
-	Tasks     []Task         `json:"tasks"`
-	Extra     map[string]any `json:"-" gorm:"serializer:json"` // 预留项
+	BlogID uint64 `json:"blog_id"`
+	TaskID uint64 `json:"task_id" gorm:"index:idx_logs_query"` // 外键
 }

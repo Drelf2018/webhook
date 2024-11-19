@@ -8,12 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// 标签
-type Tag struct {
-	Tag  string `json:"tag"`  // 文字描述
-	Href string `json:"href"` // 引用网址
-}
-
 // 博文
 type Blog struct {
 	ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
@@ -37,19 +31,17 @@ type Blog struct {
 	Following   string `json:"following"`   // 关注数
 	Description string `json:"description"` // 个人简介
 
-	ReplyID  *uint64 `json:"reply_id"`   // 被回复博文序号
-	Reply    *Blog   `json:"reply"`      // 被回复博文
-	BlogID   *uint64 `json:"comment_id"` // 被评论博文序号
-	Comments []Blog  `json:"comments"`   // 本博文的评论
+	ReplyID  *uint64 `json:"reply_id"`   // 被本文回复的博文序号
+	Reply    *Blog   `json:"reply"`      // 被本文回复的博文
+	BlogID   *uint64 `json:"comment_id"` // 被本文评论的博文序号
+	Comments []Blog  `json:"comments"`   // 本文的评论
 
-	Assets pq.StringArray `json:"assets" gorm:"type:text[]"` // 资源网址
-	Banner pq.StringArray `json:"banner" gorm:"type:text[]"` // 头图网址
-
-	Tags  []Tag          `json:"tags" gorm:"serializer:json"`  // 标签
-	Extra map[string]any `json:"extra" gorm:"serializer:json"` // 预留项
+	Assets pq.StringArray `json:"assets" gorm:"type:text[]"`    // 资源网址
+	Banner pq.StringArray `json:"banner" gorm:"type:text[]"`    // 头图网址
+	Extra  map[string]any `json:"extra" gorm:"serializer:json"` // 预留项
 }
 
-func (b *Blog) BeforeCreate(tx *gorm.DB) error {
+func (b *Blog) BeforeCreate(*gorm.DB) error {
 	b.ID = 0
 	b.CreatedAt = time.Time{}
 	if b.Reply != nil {
