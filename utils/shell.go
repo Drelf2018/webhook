@@ -28,11 +28,15 @@ func SplitLines(s string) (r []string) {
 
 var enc = mahonia.NewDecoder("gbk")
 
-func Shell(s string, dir string) ([]string, error) {
+func Shell(s string, dir string, keep bool) ([]string, error) {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("cmd", "/C", s)
+		if keep {
+			cmd = exec.Command("cmd", "/K", s)
+		} else {
+			cmd = exec.Command("cmd", "/C", s)
+		}
 	case "linux":
 		cmd = exec.Command("/bin/sh", "-c", s)
 	}
