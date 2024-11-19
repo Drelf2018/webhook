@@ -4,14 +4,16 @@ import "net/http"
 
 type Client interface {
 	Hosts() []string
-	Get(url string) (*http.Response, error)
+	Get(url string, options ...string) (*http.Response, error)
 }
 
-type DefaultClient struct{}
+const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.37"
 
-func (DefaultClient) Hosts() []string { return nil }
+type WithUserAgent []string
 
-func (DefaultClient) Get(url string) (*http.Response, error) {
+func (c WithUserAgent) Hosts() []string { return c }
+
+func (WithUserAgent) Get(url string, options ...string) (*http.Response, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -20,22 +22,4 @@ func (DefaultClient) Get(url string) (*http.Response, error) {
 	return http.DefaultClient.Do(req)
 }
 
-var cli Client = DefaultClient{}
-
-type WeiboClient struct{}
-
-func (WeiboClient) Hosts() []string {
-	return []string{"sinaimg.cn"}
-}
-
-func (WeiboClient) Get(url string) (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Referer", "https://weibo.com/")
-	req.Header.Set("User-Agent", UserAgent)
-	return http.DefaultClient.Do(req)
-}
-
-var _ Client = WeiboClient{}
+var _ Client = (*WithUserAgent)(nil)

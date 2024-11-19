@@ -4,17 +4,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	urlpkg "net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
-)
 
-const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.37"
+	_ "unsafe"
+)
 
 type Downloader struct {
 	Root    string
+	Options map[string]string
 	clients map[string]Client
 }
 
@@ -31,29 +34,29 @@ func (d *Downloader) Register(client ...Client) {
 
 var ErrInvalidURL = errors.New("webhook/file: invalid URL")
 
-func (d *Downloader) Open(name string) (http.File, error) {
+func (d *Downloader) Open(name string) (fs.File, error) {
 	// 直接打开本地文件
-	if !strings.HasPrefix(name, "/http") {
+	if !strings.HasPrefix(name, "http") {
 		return http.Dir(d.Root).Open(name)
 	}
 	// 分离协议和路径
-	protocol, path, found := strings.Cut(name[1:], "/")
+	protocol, path, found := strings.Cut(name, "/")
 	if !found {
 		return nil, ErrInvalidURL
-	}
-	// 创建资源文件夹
-	fullpath := filepath.Join(d.Root, path)
-	_, err := os.Stat(fullpath)
-	if err == nil {
-		return os.Open(fullpath)
-	}
-	err = os.MkdirAll(filepath.Dir(fullpath), os.ModePerm)
-	if err != nil {
-		return nil, err
 	}
 	// 解析网址
 	url := fmt.Sprintf("%s://%s", protocol, path)
 	u, err := urlpkg.Parse(url)
+	if err != nil {
+		return nil, err
+	}
+	// 创建资源文件夹
+	fullpath := filepath.Join(d.Root, u.Hostname()+u.Path)
+	_, err = os.Stat(fullpath)
+	if err == nil {
+		return os.Open(fullpath)
+	}
+	err = os.MkdirAll(filepath.Dir(fullpath), os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
@@ -62,14 +65,18 @@ func (d *Downloader) Open(name string) (http.File, error) {
 		client Client
 		ok     bool
 	)
-	for after, found := u.Host, true; !ok && found; _, after, found = strings.Cut(after, ".") {
-		client, ok = d.clients[after]
-	}
-	if !ok {
-		client = cli
+	if len(d.clients) != 0 {
+		for after, found := u.Host, true; !ok && found; _, after, found = strings.Cut(after, ".") {
+			client, ok = d.clients[after]
+		}
 	}
 	// 获取资源
-	resp, err := client.Get(url)
+	var resp *http.Response
+	if ok {
+		resp, err = client.Get(url, d.Options["/"+protocol+"/"+u.Host+u.Path])
+	} else {
+		resp, err = http.Get(url)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -86,10 +93,20 @@ func (d *Downloader) Open(name string) (http.File, error) {
 	return os.Open(fullpath)
 }
 
-var _ http.FileSystem = (*Downloader)(nil)
+var _ fs.FS = (*Downloader)(nil)
+
+func (d *Downloader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	upath := r.URL.Path
+	if r.URL.RawQuery != "" {
+		upath = upath + "?" + r.URL.RawQuery
+	}
+	http.ServeFileFS(w, r, d, path.Clean(upath))
+}
+
+var _ http.Handler = (*Downloader)(nil)
 
 func NewDownloader(root string, client ...Client) *Downloader {
-	d := &Downloader{Root: root}
+	d := &Downloader{Root: root, Options: make(map[string]string)}
 	d.Register(client...)
 	return d
 }
