@@ -97,9 +97,9 @@ func (p *Path) AfterInitial() (err error) {
 var _ initial.AfterInitial2 = (*Path)(nil)
 
 type Server struct {
-	Mode string `toml:"mode" yaml:"mode" json:"mode" default:"release"`   // 模式
-	Host string `toml:"host" yaml:"host" json:"host" default:"localhost"` // 主机
-	Port uint16 `toml:"port" yaml:"port" json:"port" default:"9000"`      // 端口
+	Mode string `toml:"mode" yaml:"mode" json:"mode" default:"release"` // 模式
+	Host string `toml:"host" yaml:"host" json:"host" default:"0.0.0.0"` // 主机
+	Port uint16 `toml:"port" yaml:"port" json:"port" default:"9000"`    // 端口
 }
 
 func (s Server) Addr() string {
