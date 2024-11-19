@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"net/http"
 	urlpkg "net/url"
 	"os"
@@ -34,13 +33,13 @@ func (d *Downloader) Register(client ...Client) {
 
 var ErrInvalidURL = errors.New("webhook/file: invalid URL")
 
-func (d *Downloader) Open(name string) (fs.File, error) {
+func (d *Downloader) Open(name string) (http.File, error) {
 	// 直接打开本地文件
-	if !strings.HasPrefix(name, "http") {
+	if !strings.HasPrefix(name, "/http") {
 		return http.Dir(d.Root).Open(name)
 	}
 	// 分离协议和路径
-	protocol, path, found := strings.Cut(name, "/")
+	protocol, path, found := strings.Cut(name[1:], "/")
 	if !found {
 		return nil, ErrInvalidURL
 	}
@@ -93,14 +92,17 @@ func (d *Downloader) Open(name string) (fs.File, error) {
 	return os.Open(fullpath)
 }
 
-var _ fs.FS = (*Downloader)(nil)
+var _ http.FileSystem = (*Downloader)(nil)
+
+//go:linkname ServeFile net/http.serveFile
+func ServeFile(w http.ResponseWriter, r *http.Request, fs http.FileSystem, name string, redirect bool)
 
 func (d *Downloader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	upath := r.URL.Path
 	if r.URL.RawQuery != "" {
 		upath = upath + "?" + r.URL.RawQuery
 	}
-	http.ServeFileFS(w, r, d, path.Clean(upath))
+	ServeFile(w, r, d, path.Clean(upath), true)
 }
 
 var _ http.Handler = (*Downloader)(nil)
