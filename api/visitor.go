@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -13,13 +15,21 @@ import (
 	_ "unsafe"
 )
 
-const Version = "v0.17.2"
+const Version = "v0.17.3"
 
 var onlineUsers sync.Map //map[string]time.Time
 
+var version = struct {
+	Api string `json:"api"`
+	Env string `json:"env"`
+}{
+	Version,
+	fmt.Sprintf("%s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+}
+
 // 当前版本号
 func GetVersion(ctx *gin.Context) (any, error) {
-	return Version, nil
+	return version, nil
 }
 
 // 检验鉴权码是否有效
