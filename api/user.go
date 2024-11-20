@@ -60,10 +60,13 @@ func PostTask(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 1, err
 	}
+	if len(task.Filters) == 0 {
+		return 2, ErrFilterNotExist
+	}
 	task.UserID = GetUID(ctx)
 	err = UserDB().Create(task).Error
 	if err != nil {
-		return 2, err
+		return 3, err
 	}
 	return task.ID, nil
 }
