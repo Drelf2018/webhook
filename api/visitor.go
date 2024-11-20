@@ -104,14 +104,17 @@ func GetToken(ctx *gin.Context) (data any, err error) {
 	if user.Ban.After(now) {
 		return 5, ErrBanned
 	}
-	issuedAt := now.UnixMilli()
+	var iat any
+	var found bool
+	claim := UserClaims{uid, now.UnixMilli()}
 	if ctx.Query("refresh") != "true" {
 		// 获取已有的 Token
-		if iat, found := tokenIssuedAt.Load(uid); found {
-			issuedAt = iat.(int64)
+		iat, found = tokenIssuedAt.Load(uid)
+		if found {
+			claim.IssuedAt = iat.(int64)
 		}
 	}
-	token, err := UserClaims{uid, issuedAt}.Token()
+	token, err := claim.Token(!found)
 	if err != nil {
 		return 6, err
 	}

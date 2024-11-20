@@ -10,6 +10,7 @@ import (
 type User struct {
 	UID       string         `json:"uid" gorm:"primaryKey"`
 	CreatedAt time.Time      `json:"created_at"`
+	IssuedAt  int64          `json:"-"`
 	Ban       time.Time      `json:"ban"`                      // 封禁结束时间
 	Role      Role           `json:"role"`                     // 权限等级
 	Name      string         `json:"name"`                     // 用户名 非必要不可变

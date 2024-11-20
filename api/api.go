@@ -77,10 +77,32 @@ var api = group.G{
 	Groups:     []group.G{vistor, user, admin, owner},
 }
 
+func load() error {
+	var users []UserClaims
+	err := UserDB().Find(&users).Error
+	if err != nil {
+		return err
+	}
+	for _, user := range users {
+		if user.IssuedAt != 0 {
+			tokenIssuedAt.Store(user.UID, user.IssuedAt)
+		}
+	}
+	return nil
+}
+
 func New() (r *gin.Engine) {
+	err := load()
+	if err != nil {
+		panic(err)
+	}
 	return api.New()
 }
 
 func Default() (r *gin.Engine) {
+	err := load()
+	if err != nil {
+		panic(err)
+	}
 	return api.Default()
 }

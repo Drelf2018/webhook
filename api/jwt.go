@@ -33,8 +33,12 @@ func JWTSecretKey(*jwt.Token) (any, error) {
 var tokenIssuedAt sync.Map // map[string]int64
 
 type UserClaims struct {
-	UID      string `json:"uid"`
+	UID      string `json:"uid" gorm:"primaryKey"`
 	IssuedAt int64  `json:"iat"`
+}
+
+func (UserClaims) TableName() string {
+	return "users"
 }
 
 func (c UserClaims) Valid() error {
@@ -46,12 +50,18 @@ func (c UserClaims) Valid() error {
 	return ErrExpired
 }
 
-func (c UserClaims) Token() (string, error) {
+func (c UserClaims) Token(update bool) (string, error) {
 	key, err := JWTSecretKey(nil)
 	if err != nil {
 		return "", err
 	}
-	tokenIssuedAt.Store(c.UID, c.IssuedAt)
+	if update {
+		err = UserDB().Updates(&c).Error
+		if err != nil {
+			return "", err
+		}
+		tokenIssuedAt.Store(c.UID, c.IssuedAt)
+	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(key)
 }
 
