@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,6 +23,18 @@ type PatchBody struct {
 	Path  string `json:"path"`
 	Value string `json:"value,omitempty"`
 	From  string `json:"from,omitempty"`
+}
+
+func createError(errs []group.Response) error {
+	buf := bytes.NewBufferString("webhook/api: [")
+	for i, r := range errs {
+		if i != 0 {
+			buf.WriteString("; ")
+		}
+		buf.WriteString(fmt.Sprintf("%s (%d)", r.Error, r.Code))
+	}
+	buf.WriteByte(']')
+	return errors.New(buf.String())
 }
 
 // 修改用户信息
@@ -70,18 +83,15 @@ func PatchUser(ctx *gin.Context) (any, error) {
 		}
 	}
 
-	switch len(errs) {
-	case 0:
-		err = UserDB().Save(user).Error
-		if err != nil {
-			return 5, err
-		}
-		return "success", nil
-	case 1:
-		return 6, fmt.Errorf("webhook/api: operate#%d error: %s", errs[0].Code, errs[0].Error)
-	default:
-		return errs, group.E(5, ErrMultipleErr)
+	if len(errs) != 0 {
+		return 5, createError(errs)
 	}
+
+	err = UserDB().Save(user).Error
+	if err != nil {
+		return 6, err
+	}
+	return "success", nil
 }
 
 func PatchUserBan(ctx *gin.Context, me, user *model.User, patch PatchBody) error {
@@ -228,7 +238,12 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 					err = UserDB().Create(&filter).Error
 				}
 			case "remove":
-				err = UserDB().Delete(&model.Filter{}, "id = ? AND task_id = ?", patch.Value, task.ID).Error
+				tx := UserDB().Delete(&model.Filter{}, "id = ? AND task_id = ?", patch.Value, task.ID)
+				if tx.Error != nil {
+					err = tx.Error
+				} else if tx.RowsAffected == 0 {
+					err = ErrFilterNotExist
+				}
 			}
 		}
 		if err != nil {
@@ -236,16 +251,13 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 		}
 	}
 
-	switch len(errs) {
-	case 0:
-		err = UserDB().Save(task).Error
-		if err != nil {
-			return 4, err
-		}
-		return "success", nil
-	case 1:
-		return 5, fmt.Errorf("webhook/api: operate#%d error: %s", errs[0].Code, errs[0].Error)
-	default:
-		return errs, group.E(6, ErrMultipleErr)
+	if len(errs) != 0 {
+		return 4, createError(errs)
 	}
+
+	err = UserDB().Save(task).Error
+	if err != nil {
+		return 5, err
+	}
+	return "success", nil
 }
