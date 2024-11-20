@@ -13,7 +13,14 @@ var vistor = group.G{
 	Middleware: LogMiddleware,
 	CustomFunc: func(r gin.IRouter) {
 		fs := file.NewDownloader(webhook.Global().Path.Full.Public)
-		handler := gin.WrapH(http.StripPrefix("/public", fs))
+		fileServer := http.StripPrefix("/public", http.FileServer(fs))
+		handler := func(c *gin.Context) {
+			if c.Request.URL.RawQuery != "" {
+				c.Request.URL.Path = c.Request.URL.Path + "?" + c.Request.URL.RawQuery
+				c.Request.URL.RawQuery = ""
+			}
+			fileServer.ServeHTTP(c.Writer, c.Request)
+		}
 		r.GET("/public/*filepath", handler)
 		r.HEAD("/public/*filepath", handler)
 	},

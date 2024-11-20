@@ -7,11 +7,8 @@ import (
 	"net/http"
 	urlpkg "net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
-
-	_ "unsafe"
 )
 
 type Downloader struct {
@@ -93,19 +90,6 @@ func (d *Downloader) Open(name string) (http.File, error) {
 }
 
 var _ http.FileSystem = (*Downloader)(nil)
-
-//go:linkname ServeFile net/http.serveFile
-func ServeFile(w http.ResponseWriter, r *http.Request, fs http.FileSystem, name string, redirect bool)
-
-func (d *Downloader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	upath := r.URL.Path
-	if r.URL.RawQuery != "" {
-		upath = upath + "?" + r.URL.RawQuery
-	}
-	ServeFile(w, r, d, path.Clean(upath), true)
-}
-
-var _ http.Handler = (*Downloader)(nil)
 
 func NewDownloader(root string, client ...Client) *Downloader {
 	d := &Downloader{Root: root, Options: make(map[string]string)}
