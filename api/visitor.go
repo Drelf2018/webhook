@@ -13,6 +13,7 @@ import (
 	_ "unsafe"
 )
 
+const Version = "v0.17.2"
 
 var onlineUsers sync.Map //map[string]time.Time
 
@@ -103,7 +104,14 @@ func GetToken(ctx *gin.Context) (data any, err error) {
 	if user.Ban.After(now) {
 		return 5, ErrBanned
 	}
-	token, err := UserClaims{uid, now.UnixMilli()}.Token()
+	issuedAt := now.UnixMilli()
+	if ctx.Query("refresh") != "true" {
+		// 获取已有的 Token
+		if iat, found := tokenIssuedAt.Load(uid); found {
+			issuedAt = iat.(int64)
+		}
+	}
+	token, err := UserClaims{uid, issuedAt}.Token()
 	if err != nil {
 		return 6, err
 	}
