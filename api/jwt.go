@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"strings"
 	"sync"
 
@@ -30,11 +29,6 @@ func JWTSecretKey(*jwt.Token) (any, error) {
 	}
 	return jwtSecretKey, nil
 }
-
-var (
-	ErrNoAuth  = errors.New("webhook/api: no Authorization is provided")
-	ErrExpired = errors.New("webhook/api: token is expired")
-)
 
 var tokenIssuedAt sync.Map // map[string]int64
 
@@ -74,7 +68,7 @@ func JWTAuth(ctx *gin.Context) (uid string, err error) {
 		}
 	}
 	if token == "" {
-		return "", ErrNoAuth
+		return "", ErrAuthNotExist
 	}
 	user := &UserClaims{}
 	_, err = jwt.ParseWithClaims(token, user, JWTSecretKey)

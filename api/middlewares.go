@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	group "github.com/Drelf2018/gin-group"
@@ -11,11 +10,6 @@ import (
 )
 
 const MagicUIDKey string = "_magic_uid_key_"
-
-var (
-	ErrNotAdmin = errors.New("webhook/api: no administrator permission")
-	ErrNotOwner = errors.New("webhook/api: no owner permission")
-)
 
 func IsUser(ctx *gin.Context) {
 	uid, err := JWTAuth(ctx)
@@ -42,8 +36,8 @@ func IsAdmin(ctx *gin.Context) {
 		ctx.Error(err)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -2, Error: err.Error()})
 	} else if !user.Role.IsAdmin() {
-		ctx.Error(ErrNotAdmin)
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -3, Error: ErrNotAdmin.Error()})
+		ctx.Error(ErrPermDenied)
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -3, Error: ErrPermDenied.Error()})
 	}
 }
 
@@ -53,7 +47,7 @@ func IsOwner(ctx *gin.Context) {
 		ctx.Error(err)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -1, Error: err.Error()})
 	} else if uid != webhook.Global().Role.Owner {
-		ctx.Error(ErrNotOwner)
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -2, Error: ErrNotOwner.Error()})
+		ctx.Error(ErrPermDenied)
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -2, Error: ErrPermDenied.Error()})
 	}
 }

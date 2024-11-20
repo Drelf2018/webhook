@@ -12,11 +12,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var (
-	ErrInvalidOp   = errors.New("webhook/api: invalid patch op")
-	ErrInvalidPath = errors.New("webhook/api: invalid patch path")
-	ErrPermDenied  = errors.New("webhook/api: permission denied")
-	ErrMultipleErr = errors.New("webhook/api: multiple errors")
+const (
+	ErrInvalidOp   = `invalid patch op: "%s"`
+	ErrInvalidPath = `invalid patch path: "%s"`
 )
 
 type PatchBody struct {
@@ -54,7 +52,7 @@ func PatchUser(ctx *gin.Context) (any, error) {
 		err = nil
 		switch patch.Path {
 		default:
-			err = ErrInvalidPath
+			err = fmt.Errorf(ErrInvalidPath, patch.Path)
 		case "/ban":
 			err = PatchUserBan(ctx, me, user, patch)
 			if user.Ban.After(time.Now()) {
@@ -107,7 +105,7 @@ func PatchUserBan(ctx *gin.Context, me, user *model.User, patch PatchBody) error
 		user.Ban = time.Time{}
 		return nil
 	default:
-		return ErrInvalidOp
+		return fmt.Errorf(ErrInvalidOp, patch.Op)
 	}
 }
 
@@ -130,7 +128,7 @@ func PatchUserRole(ctx *gin.Context, me, user *model.User, patch PatchBody) erro
 		user.Role = model.Role(i)
 		return nil
 	default:
-		return ErrInvalidOp
+		return fmt.Errorf(ErrInvalidOp, patch.Op)
 	}
 }
 
@@ -149,7 +147,7 @@ func PatchUserName(ctx *gin.Context, me, user *model.User, patch PatchBody) erro
 		user.Name = patch.Value
 		return nil
 	default:
-		return ErrInvalidOp
+		return fmt.Errorf(ErrInvalidOp, patch.Op)
 	}
 }
 
@@ -162,7 +160,7 @@ func PatchUserNickname(ctx *gin.Context, me, user *model.User, patch PatchBody) 
 		user.Nickname = patch.Value
 		return nil
 	default:
-		return ErrInvalidOp
+		return fmt.Errorf(ErrInvalidOp, patch.Op)
 	}
 }
 
@@ -190,7 +188,7 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 		err = nil
 		switch patch.Path {
 		default:
-			err = ErrInvalidPath
+			err = fmt.Errorf(ErrInvalidPath, patch.Path)
 		case "/enable":
 			task.Enable, err = strconv.ParseBool(patch.Value)
 		case "/name":

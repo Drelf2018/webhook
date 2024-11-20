@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -14,16 +13,6 @@ import (
 	_ "unsafe"
 )
 
-const Version = "v0.17.0"
-
-var (
-	ErrUserRegistered = errors.New("webhook/api: user registered")
-	ErrUserNotExist   = errors.New("webhook/api: user does not exist")
-	ErrIncorrectPwd   = errors.New("webhook/api: incorrect password")
-	ErrBanned         = errors.New("webhook/api: user has been banned")
-	ErrBlogNotExist   = errors.New("webhook/api: blog does not exist")
-	ErrTaskNotExist   = errors.New("webhook/api: task does not exist")
-)
 
 var onlineUsers sync.Map //map[string]time.Time
 
