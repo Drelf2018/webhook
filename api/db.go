@@ -57,5 +57,9 @@ func CloseDB() error {
 		errs = append(errs, err.Error())
 	}
 
+	if len(errs) == 0 {
+		return nil
+	}
+
 	return errors.New(strings.Join(errs, "; "))
 }

@@ -11,11 +11,9 @@ import (
 	"github.com/Drelf2018/webhook/registrar"
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/gin-gonic/gin"
-
-	_ "unsafe"
 )
 
-const Version = "v0.17.3"
+const Version = "v0.17.4-beta.0"
 
 var onlineUsers sync.Map //map[string]time.Time
 
