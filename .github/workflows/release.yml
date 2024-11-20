@@ -24,7 +24,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }} # 一个默认的变量，用来实现往 Release 中添加文件
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          goversion: 1.18 # 可以指定编译使用的 Golang 版本
           project_path: cmd/webhook # 修改 go build 目录
           md5sum: false # 同时生成 md5 文件 这就没必要了
           compress_assets: OFF # 自动打包 不要！
