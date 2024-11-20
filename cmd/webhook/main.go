@@ -31,7 +31,7 @@ func init() {
 			return nil, 10002, err
 		}
 		owner := webhook.Global().Role.Owner
-		pwd := webhook.Global().Extra["owner_password"].(string)
+		pwd := webhook.Global().Extra["password"].(string)
 		if owner == "" || pwd == "" {
 			return nil, 10003, ErrMissing
 		}
@@ -45,7 +45,7 @@ func init() {
 func main() {
 	addr, err := webhook.Initial(&webhook.Config{
 		Filename: "config.toml",
-		Extra:    map[string]any{"owner_password": ""},
+		Extra:    map[string]any{"password": ""},
 	})
 	if err != nil {
 		os.WriteFile("error.log", []byte(err.Error()), os.ModePerm)
