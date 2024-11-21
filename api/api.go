@@ -65,9 +65,6 @@ var owner = group.G{
 	Handlers: []group.H{
 		GetExecute,
 		GetShutdown,
-		DeletePublic,
-		DeleteFile,
-		DeleteRoot,
 	},
 }
 
