@@ -51,6 +51,20 @@ func (b *Blog) BeforeCreate(*gorm.DB) error {
 	return nil
 }
 
+func (b *Blog) AfterCreate(tx *gorm.DB) error {
+	if b.Reply == nil && b.ReplyID != nil {
+		b.Reply = &Blog{ID: *b.ReplyID}
+		tx = tx.Limit(1).Find(b.Reply)
+		if tx.Error != nil {
+			return tx.Error
+		}
+		if tx.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+	}
+	return nil
+}
+
 var MaxTextLength = 18
 
 func (b Blog) String() string {
