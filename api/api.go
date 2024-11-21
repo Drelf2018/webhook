@@ -65,6 +65,7 @@ var owner = group.G{
 	Handlers: []group.H{
 		GetExecute,
 		GetShutdown,
+		GetUserUID,
 	},
 }
 
