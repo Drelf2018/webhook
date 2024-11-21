@@ -13,16 +13,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const Version = "v0.17.4-beta.0"
-
-var onlineUsers sync.Map //map[string]time.Time
+const Version = "v0.17.4"
 
 var version = struct {
-	Api string `json:"api"`
-	Env string `json:"env"`
+	Api string    `json:"api"`
+	Env string    `json:"env"`
+	Run time.Time `json:"run"`
 }{
 	Version,
 	fmt.Sprintf("%s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+	time.Now(),
 }
 
 // 当前版本号
@@ -35,6 +35,8 @@ func GetValid(ctx *gin.Context) (any, error) {
 	_, err := JWTAuth(ctx)
 	return err == nil, nil
 }
+
+var onlineUsers sync.Map //map[string]time.Time
 
 // 更新在线时间
 func GetPing(ctx *gin.Context) (any, error) {
