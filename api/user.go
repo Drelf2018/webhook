@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Drelf2018/webhook/model"
@@ -21,11 +22,11 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 2, err
 	}
-	go hook(blog)
+	go hook(ctx.Copy(), blog)
 	return blog.ID, nil
 }
 
-func hook(blog *model.Blog) {
+func hook(c *gin.Context, blog *model.Blog) {
 	var tasks []*model.Task
 	err := UserDB().Find(&tasks, "enable AND id IN (?)",
 		UserDB().Model(&model.Filter{}).Distinct("task_id").Where(
@@ -40,15 +41,16 @@ func hook(blog *model.Blog) {
 		),
 	).Error
 	if err != nil {
-		Log().Errorf("%s WebhookError: %s", blog, err)
+		Error(c, fmt.Errorf("webhook/api: %s: %v", blog, err))
+		return
 	}
 	if len(tasks) == 0 {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	err = UserDB().Create(model.NewTemplate(blog).RunTasks(ctx, tasks)).Error
 	if err != nil {
-		Log().Errorf("%s WebhookError: %s", blog, err)
+		Error(c, fmt.Errorf("webhook/api: %s: %v", blog, err))
 	}
 	cancel()
 }
