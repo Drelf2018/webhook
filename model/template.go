@@ -88,9 +88,9 @@ func (t *Template) DoWithContext(ctx context.Context, task *Task) (result []byte
 func (t *Template) RunTask(ctx context.Context, task *Task) RequestLog {
 	r, err := t.DoWithContext(ctx, task)
 	log := RequestLog{
-		CreatedAt: time.Now(),
-		TaskID:    task.ID,
 		BlogID:    t.id,
+		TaskID:    task.ID,
+		CreatedAt: time.Now(),
 	}
 	if err != nil {
 		log.Error = err.Error()

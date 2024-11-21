@@ -95,13 +95,10 @@ type Filter struct {
 
 // 请求记录
 type RequestLog struct {
-	ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
+	BlogID    uint64    `json:"blog_id"`
 	CreatedAt time.Time `json:"created_at"`
-
-	RawResult string `json:"raw_result"`                    // 响应纯文本
-	Result    any    `json:"result" gorm:"serializer:json"` // 响应为 JSON 会自动解析
-	Error     string `json:"error"`                         // 请求过程中发生的错误
-
-	BlogID uint64 `json:"blog_id"`
-	TaskID uint64 `json:"task_id" gorm:"index:idx_logs_query"` // 外键
+	RawResult string    `json:"raw_result"`                    // 响应纯文本
+	Result    any       `json:"result" gorm:"serializer:json"` // 响应为 JSON 会自动解析
+	Error     string    `json:"error"`                         // 请求过程中发生的错误
+	TaskID    uint64    `json:"-" gorm:"index:idx_logs_query"` // 外键
 }
