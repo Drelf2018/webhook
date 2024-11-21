@@ -8,16 +8,17 @@ import (
 
 // 用户
 type User struct {
-	UID       string         `json:"uid" gorm:"primaryKey"`
-	CreatedAt time.Time      `json:"created_at"`
-	IssuedAt  int64          `json:"-"`
-	Ban       time.Time      `json:"ban"`                      // 封禁结束时间
-	Role      Role           `json:"role"`                     // 权限等级
-	Name      string         `json:"name"`                     // 用户名 非必要不可变
-	Nickname  string         `json:"nickname"`                 // 昵称 可变
-	Password  string         `json:"-"`                        // 密码 不可变
-	Extra     map[string]any `json:"-" gorm:"serializer:json"` // 预留项
-	Tasks     []Task         `json:"tasks"`                    // 任务集
+	UID       string    `json:"uid" gorm:"primaryKey"`
+	CreatedAt time.Time `json:"created_at"`
+	IssuedAt  int64     `json:"-"`
+	Ban       time.Time `json:"ban"`      // 封禁结束时间
+	Role      Role      `json:"role"`     // 权限等级
+	Name      string    `json:"name"`     // 用户名 非必要不可变
+	Nickname  string    `json:"nickname"` // 昵称 可变
+	Password  string    `json:"-"`        // 密码 不可变
+	Tasks     []Task    `json:"tasks"`    // 任务集
+
+	Extra map[string]any `json:"-" gorm:"serializer:json;->:false"` // 预留项 仅存
 }
 
 const (
