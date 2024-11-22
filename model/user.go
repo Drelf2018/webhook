@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -18,7 +19,7 @@ type User struct {
 	Password  string    `json:"-"`        // 密码 不可变
 	Tasks     []Task    `json:"tasks"`    // 任务集
 
-	Extra map[string]any `json:"-" gorm:"serializer:json;->:false"` // 预留项 仅存
+	Extra map[string]any `json:"-" gorm:"serializer:json"` // 预留项 仅存
 }
 
 const (
@@ -85,12 +86,23 @@ func (t *Task) AfterFind(tx *gorm.DB) error {
 //		UID: "514",
 //	}
 type Filter struct {
-	ID        uint64 `json:"id" gorm:"primaryKey;autoIncrement"`
 	Submitter string `json:"submitter"` // 提交者
 	Platform  string `json:"platform"`  // 发布平台
 	Type      string `json:"type"`      // 博文类型
 	UID       string `json:"uid"`       // 账户序号
 	TaskID    uint64 `json:"-"`         // 外键
+}
+
+func (f Filter) IsZero() bool {
+	return f.Submitter == "" && f.Platform == "" && f.Type == "" && f.UID == ""
+}
+
+func (f Filter) IsValid() bool {
+	return !f.IsZero() && f.TaskID != 0
+}
+
+func (f Filter) String() string {
+	return fmt.Sprintf("%s.%s.%s.%s", f.Platform, f.Type, f.UID, f.Submitter)
 }
 
 // 请求记录

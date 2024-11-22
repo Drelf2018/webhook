@@ -183,15 +183,13 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 	}
 
 	task := &model.Task{}
-	tx := UserDB().Preload("Filters").Limit(1).Find(task, "id = ? AND user_id = ?", ctx.Param("id"), GetUID(ctx))
+	tx := UserDB().Limit(1).Find(task, "id = ? AND user_id = ?", ctx.Param("id"), GetUID(ctx))
 	if tx.Error != nil {
 		return 2, tx.Error
 	}
 	if tx.RowsAffected == 0 {
 		return 3, ErrTaskNotExist
 	}
-	filters := task.Filters
-	task.Filters = nil
 
 	var errs []group.Response
 	for i, patch := range body {
@@ -216,34 +214,14 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 		case "/README":
 			task.README = patch.Value
 		case "/filters":
-			switch patch.Op {
-			case "replace":
-				var filter model.Filter
-				err = json.Unmarshal([]byte(patch.Value), &filter)
-				if err == nil {
-					filter.TaskID = task.ID
-					for idx := range filters {
-						if filters[idx].ID == filter.ID {
-							err = UserDB().Save(&filter).Error
-							break
-						}
-					}
-				}
-			case "add":
-				var filter model.Filter
-				err = json.Unmarshal([]byte(patch.Value), &filter)
-				if err == nil {
-					filter.ID = 0
-					filter.TaskID = task.ID
-					err = UserDB().Create(&filter).Error
-				}
-			case "remove":
-				tx := UserDB().Delete(&model.Filter{}, "id = ? AND task_id = ?", patch.Value, task.ID)
-				if tx.Error != nil {
-					err = tx.Error
-				} else if tx.RowsAffected == 0 {
-					err = ErrFilterNotExist
-				}
+			var filters []model.Filter
+			err = json.Unmarshal([]byte(patch.Value), &filters)
+			if err != nil {
+				break
+			}
+			task.Filters = removeDuplicatesFilters(filters)
+			if len(task.Filters) == 0 {
+				err = ErrFilterNotExist
 			}
 		}
 		if err != nil {
@@ -255,9 +233,15 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 		return 4, createError(errs)
 	}
 
-	err = UserDB().Save(task).Error
+	if len(task.Filters) != 0 {
+		err = UserDB().Delete(&model.Filter{}, "task_id = ?", task.ID).Error
+		if err != nil {
+			return 5, err
+		}
+	}
+	err = UserDB().Debug().Save(task).Error
 	if err != nil {
-		return 5, err
+		return 6, err
 	}
 	return "success", nil
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const Version = "v0.17.5-beta.1"
+const Version = "v0.17.5"
 
 var version = struct {
 	Api string    `json:"api"`
@@ -182,7 +182,6 @@ func PostFilter(ctx *gin.Context) (any, error) {
 	}
 	filter := BlogDB().Model(&model.Blog{})
 	for _, f := range f.Filters {
-		f.ID = 0
 		filter = filter.Or(f)
 	}
 	var blogs []model.Blog

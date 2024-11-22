@@ -47,6 +47,20 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	return blog.ID, nil
 }
 
+func removeDuplicatesFilters(filters []model.Filter) (result []model.Filter) {
+	exists := make(map[string]struct{}, len(filters))
+	for _, f := range filters {
+		if _, ok := exists[f.String()]; ok {
+			continue
+		}
+		exists[f.String()] = struct{}{}
+		if !f.IsZero() {
+			result = append(result, f)
+		}
+	}
+	return
+}
+
 // 新增任务
 func PostTask(ctx *gin.Context) (any, error) {
 	task := &model.Task{}
@@ -54,6 +68,7 @@ func PostTask(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 1, err
 	}
+	task.Filters = removeDuplicatesFilters(task.Filters)
 	if len(task.Filters) == 0 {
 		return 2, ErrFilterNotExist
 	}
