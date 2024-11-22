@@ -2,7 +2,6 @@ package model
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -42,7 +41,7 @@ func (t *Template) String(text string) (string, error) {
 	return string(b), err
 }
 
-func (t *Template) DoWithContext(ctx context.Context, task *Task) (result []byte, err error) {
+func (t *Template) Do(task *Task) (result []byte, err error) {
 	url, err := t.String(task.URL)
 	if err != nil {
 		return
@@ -56,7 +55,7 @@ func (t *Template) DoWithContext(ctx context.Context, task *Task) (result []byte
 		}
 	}
 
-	req, err := http.NewRequestWithContext(ctx, task.Method, url, body)
+	req, err := http.NewRequest(task.Method, url, body)
 	if err != nil {
 		return
 	}
@@ -85,34 +84,37 @@ func (t *Template) DoWithContext(ctx context.Context, task *Task) (result []byte
 	return io.ReadAll(resp.Body)
 }
 
-func (t *Template) RunTask(ctx context.Context, task *Task) RequestLog {
-	r, err := t.DoWithContext(ctx, task)
+func (t *Template) RunTask(task *Task) RequestLog {
 	log := RequestLog{
 		BlogID:    t.id,
 		TaskID:    task.ID,
 		CreatedAt: time.Now(),
 	}
+	r, err := t.Do(task)
 	if err != nil {
 		log.Error = err.Error()
+		log.FinishedAt = time.Now()
 		return log
 	}
 	err = json.Unmarshal(r, &log.Result)
 	if err != nil {
 		log.RawResult = string(r)
 		log.Error = err.Error()
+		log.FinishedAt = time.Now()
 		return log
 	}
+	log.FinishedAt = time.Now()
 	return log
 }
 
-func (t *Template) RunTasks(ctx context.Context, tasks []*Task) []RequestLog {
+func (t *Template) RunTasks(tasks []*Task) []RequestLog {
 	logs := make([]RequestLog, len(tasks))
 	wg := &sync.WaitGroup{}
 	wg.Add(len(tasks))
 	for idx := range tasks {
 		idx := idx
 		go func() {
-			logs[idx] = t.RunTask(ctx, tasks[idx])
+			logs[idx] = t.RunTask(tasks[idx])
 			wg.Done()
 		}()
 	}

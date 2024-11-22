@@ -1,9 +1,11 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Drelf2018/webhook/model"
+	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,16 +19,14 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	}
 	blog.Submitter = GetUID(ctx)
 	err = BlogDB().Create(blog).Error
-	if err != nil {
-		return 2, err
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return 2, ErrBlogNotExist
 	}
-	go hook(ctx.Copy(), blog)
-	return blog.ID, nil
-}
-
-func hook(ctx *gin.Context, blog *model.Blog) {
+	if err != nil {
+		return 3, err
+	}
 	var tasks []*model.Task
-	err := UserDB().Find(&tasks, "enable AND id IN (?)",
+	err = UserDB().Find(&tasks, "enable AND id IN (?)",
 		UserDB().Model(&model.Filter{}).Distinct("task_id").Where(
 			`(submitter = "" OR submitter = ?) AND
 			(platform = "" OR platform = ?) AND
@@ -39,16 +39,12 @@ func hook(ctx *gin.Context, blog *model.Blog) {
 		),
 	).Error
 	if err != nil {
-		Error(ctx, fmt.Errorf("webhook/api: %s: %v", blog, err))
-		return
+		return 4, fmt.Errorf("webhook/api: %s: %v", blog, err)
 	}
-	if len(tasks) == 0 {
-		return
+	if len(tasks) != 0 {
+		go UserDB().Create(model.NewTemplate(blog).RunTasks(tasks))
 	}
-	err = UserDB().Create(model.NewTemplate(blog).RunTasks(ctx, tasks)).Error
-	if err != nil {
-		Error(ctx, fmt.Errorf("webhook/api: %s: %v", blog, err))
-	}
+	return blog.ID, nil
 }
 
 // 新增任务
@@ -120,7 +116,7 @@ func PostTest(ctx *gin.Context) (any, error) {
 	if data.Task == nil {
 		return 3, ErrTaskNotExist
 	}
-	return model.NewTemplate(data.Blog).RunTask(ctx, data.Task), nil
+	return model.NewTemplate(data.Blog).RunTask(data.Task), nil
 }
 
 // 测试已有任务
@@ -141,5 +137,5 @@ func PostTests(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 3, err
 	}
-	return model.NewTemplate(data.Blog).RunTasks(ctx, tasks), nil
+	return model.NewTemplate(data.Blog).RunTasks(tasks), nil
 }
