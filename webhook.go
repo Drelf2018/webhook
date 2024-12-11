@@ -32,6 +32,7 @@ type Path struct {
 	BlogDB string `toml:"blogDB" yaml:"blogDB" json:"blogDB" default:"blogs.db" join:"Root"`   // 博文数据库文件
 	Public string `toml:"public" yaml:"public" json:"public" default:"public"   join:"Root"`   // 公开文件夹
 	Backup string `toml:"backup" yaml:"backup" json:"backup" default:"backup"   join:"Public"` // 博文数据库备份文件夹
+	Upload string `toml:"upload" yaml:"upload" json:"upload" default:"upload"   join:"Public"` // 上传文件文件夹
 
 	Full *Path `toml:"-" yaml:"-" json:"-"` // 以上字段的全路径 通过 utils.NewJoin 函数拼接
 }
@@ -75,6 +76,10 @@ func (p *Path) AfterInitial() (err error) {
 		return
 	}
 	err = os.MkdirAll(p.Full.Backup, os.ModePerm)
+	if err != nil {
+		return
+	}
+	err = os.MkdirAll(p.Full.Upload, os.ModePerm)
 	if err != nil {
 		return
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"path/filepath"
 	"strings"
 
 	group "github.com/Drelf2018/gin-group"
@@ -129,7 +128,7 @@ func load() error {
 		}
 	}
 
-	upload := filepath.Join(webhook.Global().Path.Full.Public, "upload")
+	upload := webhook.Global().Path.Full.Upload
 	return LoadDir(upload, upload)
 }
 

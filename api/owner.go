@@ -45,7 +45,7 @@ func PostUpload(ctx *gin.Context) (any, error) {
 		return 1, err
 	}
 	errs := make([]string, 0)
-	upload := filepath.Join(webhook.Global().Path.Full.Public, "upload")
+	upload := webhook.Global().Path.Full.Upload
 	for fieldname, files := range form.File {
 		dir := filepath.Join(form.Value[fieldname]...)
 		if strings.HasPrefix(dir, "user") || strings.HasPrefix(dir, "admin") || strings.HasPrefix(dir, "owner") {
