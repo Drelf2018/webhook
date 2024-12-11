@@ -105,6 +105,7 @@ var owner = group.G{
 		GetExecute,
 		GetShutdown,
 		GetUserUID,
+		PostUpload,
 	},
 }
 

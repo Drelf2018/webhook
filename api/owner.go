@@ -1,6 +1,11 @@
 package api
 
 import (
+	"fmt"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/Drelf2018/webhook"
 	"github.com/Drelf2018/webhook/model"
 	"github.com/Drelf2018/webhook/utils"
@@ -31,4 +36,36 @@ func GetUserUID(ctx *gin.Context) (any, error) {
 		return 2, ErrUserNotExist
 	}
 	return user, nil
+}
+
+// 上传文件
+func PostUpload(ctx *gin.Context) (any, error) {
+	form, err := ctx.MultipartForm()
+	if err != nil {
+		return 1, err
+	}
+	errs := make([]string, 0)
+	upload := filepath.Join(webhook.Global().Path.Full.Public, "upload")
+	for fieldname, files := range form.File {
+		dir := filepath.Join(form.Value[fieldname]...)
+		if strings.HasPrefix(dir, "user") || strings.HasPrefix(dir, "admin") || strings.HasPrefix(dir, "owner") {
+			errs = append(errs, fmt.Sprintf("dir \"%s\" has invalid prefix", dir))
+			continue
+		}
+		for _, file := range files {
+			if file.Filename == "index.html" {
+				file.Filename = time.Now().Format("index.2006-01-02-15-04-05.html")
+			}
+			filename := filepath.Join(upload, dir, file.Filename)
+			err := ctx.SaveUploadedFile(file, filename)
+			if err != nil {
+				errs = append(errs, err.Error())
+			}
+			LoadFile(upload, filename)
+		}
+	}
+	if len(errs) != 0 {
+		return 2, fmt.Errorf("webhook/api: upload files error: %s", strings.Join(errs, "; "))
+	}
+	return "success", nil
 }
