@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	group "github.com/Drelf2018/gin-group"
 	"github.com/Drelf2018/webhook"
@@ -110,9 +112,9 @@ var owner = group.G{
 }
 
 var api = group.G{
-	Middleware: group.CORS,
-	Handlers:   []group.H{GetValid, GetPing},
-	Groups:     []group.G{vistor, user, admin, owner},
+	Middlewares: []gin.HandlerFunc{group.CORS, Index}, //
+	Handlers:    []group.H{GetValid, GetPing},
+	Groups:      []group.G{vistor, user, admin, owner},
 }
 
 func load() error {
@@ -126,7 +128,9 @@ func load() error {
 			tokenIssuedAt.Store(user.UID, user.IssuedAt)
 		}
 	}
-	return nil
+
+	upload := filepath.Join(webhook.Global().Path.Full.Public, "upload")
+	return LoadDir(upload, upload)
 }
 
 func New() (r *gin.Engine) {

@@ -19,10 +19,12 @@ var version = struct {
 	Api string    `json:"api"`
 	Env string    `json:"env"`
 	Run time.Time `json:"run"`
+	Idx []string  `json:"idx"`
 }{
 	Version,
 	fmt.Sprintf("%s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH),
 	time.Now(),
+	[]string{},
 }
 
 // 当前版本号
