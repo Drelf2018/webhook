@@ -31,10 +31,10 @@ type Blog struct {
 	Following   string `json:"following"`   // 关注数
 	Description string `json:"description"` // 个人简介
 
-	ReplyID  *uint64 `json:"reply_id"`   // 被本文回复的博文序号
-	Reply    *Blog   `json:"reply"`      // 被本文回复的博文
-	BlogID   *uint64 `json:"comment_id"` // 被本文评论的博文序号
-	Comments []Blog  `json:"comments"`   // 本文的评论
+	ReplyID   *uint64 `json:"reply_id"`                             // 被本文回复的博文序号
+	Reply     *Blog   `json:"reply"`                                // 被本文回复的博文
+	CommentID *uint64 `json:"comment_id"`                           // 被本文评论的博文序号
+	Comments  []Blog  `json:"comments" gorm:"foreignKey:CommentID"` // 本文的评论
 
 	Assets pq.StringArray `json:"assets" gorm:"type:text[]"`    // 资源网址
 	Banner pq.StringArray `json:"banner" gorm:"type:text[]"`    // 头图网址
