@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const Version = "v0.17.5"
+const Version = "v0.18.0"
 
 var version = struct {
 	Api string    `json:"api"`
