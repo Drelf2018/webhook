@@ -33,7 +33,7 @@ var ErrInvalidURL = errors.New("webhook/file: invalid URL")
 func (d *Downloader) Open(name string) (http.File, error) {
 	// 直接打开本地文件
 	if !strings.HasPrefix(name, "/http") {
-		return http.Dir(d.Root).Open(name)
+		return http.Dir(d.Root).Open(strings.ReplaceAll(name, ":", "/"))
 	}
 	// 分离协议和路径
 	protocol, path, found := strings.Cut(name[1:], "/")
@@ -46,8 +46,11 @@ func (d *Downloader) Open(name string) (http.File, error) {
 	if err != nil {
 		return nil, err
 	}
+	if u.Hostname() == "" {
+		return nil, ErrInvalidURL
+	}
 	// 创建资源文件夹
-	fullpath := filepath.Join(d.Root, u.Hostname()+u.Path)
+	fullpath := filepath.Join(d.Root, u.Hostname(), u.Port(), u.Path)
 	_, err = os.Stat(fullpath)
 	if err == nil {
 		return os.Open(fullpath)
@@ -87,6 +90,11 @@ func (d *Downloader) Open(name string) (http.File, error) {
 		return nil, err
 	}
 	return os.Open(fullpath)
+}
+
+func (d *Downloader) Download(url string) error {
+	_, err := d.Open("/" + strings.Replace(url, ":/", "", 1))
+	return err
 }
 
 var _ http.FileSystem = (*Downloader)(nil)

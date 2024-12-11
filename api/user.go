@@ -10,6 +10,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 开启自动下载会极大的占用带宽 建议发送完所有 hook 请求后再下载
+var AutoDownload bool
+
+// 下载资源
+func DownloadAssets(blog *model.Blog) {
+	if blog == nil {
+		return
+	}
+	if blog.Avatar != "" {
+		downloader.Download(blog.Avatar)
+	}
+	for _, url := range blog.Assets {
+		downloader.Download(url)
+	}
+	for _, url := range blog.Banner {
+		downloader.Download(url)
+	}
+	if blog.Reply != nil {
+		go DownloadAssets(blog.Reply)
+	}
+}
+
 // 提交博文
 func PostBlog(ctx *gin.Context) (any, error) {
 	blog := &model.Blog{}
@@ -41,9 +63,14 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 4, fmt.Errorf("webhook/api: %s: %v", blog, err)
 	}
-	if len(tasks) != 0 {
-		go UserDB().Create(model.NewTemplate(blog).RunTasks(tasks))
-	}
+	go func() {
+		if len(tasks) != 0 {
+			UserDB().Create(model.NewTemplate(blog).RunTasks(tasks))
+		}
+		if AutoDownload {
+			DownloadAssets(blog)
+		}
+	}()
 	return blog.ID, nil
 }
 
