@@ -75,7 +75,8 @@ func (t *Template) Do(task *Task) (result []byte, err error) {
 		req.Header.Add(k, v)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return
 	}
