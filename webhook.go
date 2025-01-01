@@ -23,7 +23,7 @@ type Handler interface {
 
 func run(handler Handler, cfg *Config) error {
 	if cfg == nil {
-		cfg = &Config{Filename: "config.yml"}
+		cfg = &Config{Filename: "config.toml"}
 	}
 	if cfg.Role.Admin == nil {
 		cfg.Role.Admin = make([]string, 0)
@@ -44,14 +44,15 @@ func run(handler Handler, cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	err = handler.Initial(cfg)
-	if err != nil {
-		return err
-	}
 
 	switch cfg.Server.Mode {
 	case gin.ReleaseMode, gin.DebugMode, gin.TestMode:
 		gin.SetMode(cfg.Server.Mode)
+	}
+
+	err = handler.Initial(cfg)
+	if err != nil {
+		return err
 	}
 
 	return nil

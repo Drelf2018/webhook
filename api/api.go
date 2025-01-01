@@ -221,7 +221,7 @@ func (o *OpenAPI) Initial(cfg *webhook.Config) error {
 		return err
 	}
 
-	err = registrar.Initial(cfg.Extra)
+	err = registrar.Initial(cfg)
 	if err != nil {
 		return err
 	}
