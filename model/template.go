@@ -4,12 +4,28 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"reflect"
 	"sync"
 	"text/template"
 	"time"
 )
+
+var cli = &http.Client{
+	Transport: &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   time.Minute,
+			KeepAlive: time.Minute,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	},
+}
 
 var root = template.New("root").Funcs(template.FuncMap{
 	"json": func(v any) (string, error) {
@@ -75,13 +91,17 @@ func (t *Template) Do(task *Task) (result []byte, err error) {
 		req.Header.Add(k, v)
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	var resp *http.Response
+	for i := 0; i < 3; i++ {
+		resp, err = cli.Do(req)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
-
 	return io.ReadAll(resp.Body)
 }
 
