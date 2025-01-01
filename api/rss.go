@@ -18,22 +18,13 @@ import (
 
 var BaseURL string = ""
 
-// <img src="{{ download .Avatar }}" style="height: 4em;border-radius: 1em;box-shadow: 0 3px 1px -2px #0000001f, 0 2px 2px #00000024, 0 1px 5px #0003;vertical-align:middle;margin-right: 0.5em;" />
-// <div style="height: 4em;border-radius: 1em;box-shadow: 0 3px 1px -2px #0000001f, 0 2px 2px #00000024, 0 1px 5px #0003;vertical-align:middle;margin-right: 0.5em;">
-//
-//		<img src="{{ download .Avatar }}" style="height:4rem" />
-//	</div>
 var tmpl, _ = template.New("rss").Funcs(template.FuncMap{
 	"download": func(url string) string {
 		return fmt.Sprintf("%s/public/%s", BaseURL, strings.ReplaceAll(url, ":/", ""))
 	},
 }).Parse(`
-<div
-    style="width: max-content;margin-top: 0.5em; display: flex;padding: 0.5em;align-items: center;border-radius:1em;box-shadow: 0 3px 1px -2px #0000001f, 0 2px 2px #00000024, 0 1px 5px #0003;">
-    <div
-        style="background-repeat: round;width: 4rem;background-image: url({{ download .Avatar }});height: 4rem;border-radius: 1em;box-shadow: 0 3px 1px -2px #0000001f, 0 2px 2px #00000024, 0 1px 5px #0003;margin-right: 0.5em;">
-        1
-    </div>
+<div style="width: max-content;margin-top: 0.5em; display: flex;padding: 0.5em;align-items: center;border-radius:1em;box-shadow: 0 3px 1px -2px #0000001f, 0 2px 2px #00000024, 0 1px 5px #0003;">
+    <div style="background-repeat: round;width: 4rem;background-image: url({{ download .Avatar }});height: 4rem;border-radius: 1em;box-shadow: 0 3px 1px -2px #0000001f, 0 2px 2px #00000024, 0 1px 5px #0003;margin-right: 0.5em;"></div>
     <div style="margin-right: 0.5em;">
         <div style="font-size: 1.5em;color: #343233;font-weight: bold;">{{ .Author }}</div>
         <div style="color: grey;">{{ .Description }}</div>
@@ -131,17 +122,6 @@ type Channel struct {
 	Filters   []model.Filter `xml:"-" gorm:"foreignKey:TaskID"` // 筛选条件
 }
 
-// const UserInfo string = `<div
-// 	style="width: max-content;margin-top: 0.5em; display: flex;padding: 0.5em;align-items: center;border-radius:1em;box-shadow: 0 3px 1px -2px #0000001f, 0 2px 2px #00000024, 0 1px 5px #0003;">
-// 	<img src="%s"
-// 		style="height: 4em;border-radius: 1em;box-shadow: 0 3px 1px -2px #0000001f, 0 2px 2px #00000024, 0 1px 5px #0003;vertical-align:middle;margin-right: 0.5em;" />
-// 	<div style="margin-right: 0.5em;">
-// 		<div style="font-size: 1.5em;color: #343233;font-weight: bold;">%s</div>
-// 		<div style="color: grey;">%s</div>
-// 	</div>
-// </div>`
-
-// http://127.0.0.1:9000/rss/1
 func (c *Channel) AfterFind(tx *gorm.DB) error {
 	// 初始化数据
 	c.Link = fmt.Sprintf("%s/task/%d", BaseURL, c.ID)
@@ -166,15 +146,16 @@ func (c *Channel) AfterFind(tx *gorm.DB) error {
 		return err
 	}
 	for _, item := range c.Items {
-		if item.Title == "" && !strings.Contains(item.Desc, "<") {
-			item.Title = item.Desc
+		if item.Title == "" {
+			item.Title = item.Author
 		}
 		for _, asset := range item.Assets {
 			if strings.HasPrefix(asset.Type, "image") {
 				item.Desc += fmt.Sprintf("<br /><img src=\"%s\" referrerpolicy=\"no-referrer\" style=\"vertical-align:middle;\" />", asset.URL)
+			} else if strings.HasPrefix(asset.Type, "video") {
+				item.Desc += fmt.Sprintf("<br /><video controls><source src=\"%s\" type=\"%s\"></video>", asset.URL, asset.Type)
 			}
 		}
-		// item.Desc += fmt.Sprintf(UserInfo, fmt.Sprintf("%s/public/%s", BaseURL, strings.ReplaceAll(item.Avatar, ":/", "")), item.Author, item.Description)
 		item.Desc += GetUserInfo(item)
 	}
 	return nil
