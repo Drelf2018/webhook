@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	group "github.com/Drelf2018/gin-group"
-	"github.com/Drelf2018/webhook"
 	"github.com/Drelf2018/webhook/model"
 	"github.com/gin-gonic/gin"
 )
@@ -32,7 +31,7 @@ func IsAdmin(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -1, Error: err.Error()})
 	}
 	user := &model.User{UID: uid}
-	if err = UserDB().First(user).Error; err != nil {
+	if err = UserDB.First(user).Error; err != nil {
 		ctx.Error(err)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -2, Error: err.Error()})
 	} else if !user.Role.IsAdmin() {
@@ -46,7 +45,7 @@ func IsOwner(ctx *gin.Context) {
 	if err != nil {
 		ctx.Error(err)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -1, Error: err.Error()})
-	} else if uid != webhook.Global().Role.Owner {
+	} else if uid != config.Role.Owner {
 		ctx.Error(ErrPermDenied)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -2, Error: ErrPermDenied.Error()})
 	}

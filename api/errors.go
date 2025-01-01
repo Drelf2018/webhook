@@ -3,6 +3,8 @@ package api
 import "errors"
 
 var (
+	ErrOpenAPINotExist = errors.New("webhook/api: OpenAPI does not exist")
+
 	ErrAuthNotExist   = errors.New("webhook/api: Authorization does not exist")
 	ErrBlogNotExist   = errors.New("webhook/api: blog does not exist")
 	ErrUserNotExist   = errors.New("webhook/api: user does not exist")

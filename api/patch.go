@@ -46,7 +46,7 @@ func PatchUser(ctx *gin.Context) (any, error) {
 	}
 
 	user := &model.User{UID: ctx.Param("uid")}
-	tx := UserDB().Limit(1).Find(user)
+	tx := UserDB.Limit(1).Find(user)
 	if tx.Error != nil {
 		return 2, tx.Error
 	}
@@ -55,7 +55,7 @@ func PatchUser(ctx *gin.Context) (any, error) {
 	}
 
 	me := &model.User{UID: GetUID(ctx)}
-	err = UserDB().First(me).Error
+	err = UserDB.First(me).Error
 	if err != nil {
 		return 4, err
 	}
@@ -87,7 +87,7 @@ func PatchUser(ctx *gin.Context) (any, error) {
 		return 5, createError(errs)
 	}
 
-	err = UserDB().Save(user).Error
+	err = UserDB.Save(user).Error
 	if err != nil {
 		return 6, err
 	}
@@ -183,7 +183,7 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 	}
 
 	task := &model.Task{}
-	tx := UserDB().Limit(1).Find(task, "id = ? AND user_id = ?", ctx.Param("id"), GetUID(ctx))
+	tx := UserDB.Limit(1).Find(task, "id = ? AND user_id = ?", ctx.Param("id"), GetUID(ctx))
 	if tx.Error != nil {
 		return 2, tx.Error
 	}
@@ -234,12 +234,12 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 	}
 
 	if len(task.Filters) != 0 {
-		err = UserDB().Delete(&model.Filter{}, "task_id = ?", task.ID).Error
+		err = UserDB.Delete(&model.Filter{}, "task_id = ?", task.ID).Error
 		if err != nil {
 			return 5, err
 		}
 	}
-	err = UserDB().Debug().Save(task).Error
+	err = UserDB.Debug().Save(task).Error
 	if err != nil {
 		return 6, err
 	}

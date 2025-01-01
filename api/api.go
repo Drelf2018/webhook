@@ -4,12 +4,20 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	group "github.com/Drelf2018/gin-group"
 	"github.com/Drelf2018/webhook"
 	"github.com/Drelf2018/webhook/file"
+	"github.com/Drelf2018/webhook/model"
+	"github.com/Drelf2018/webhook/registrar"
+	"github.com/Drelf2018/webhook/utils"
+	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
+	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 var downloader *file.Downloader
@@ -18,7 +26,7 @@ var vistor = group.G{
 	Middleware: LogMiddleware,
 	CustomFunc: func(r gin.IRouter) {
 		// 下载文件的处理函数
-		downloader = file.NewDownloader(webhook.Global().Path.Full.Public)
+		downloader = file.NewDownloader(config.Path.Full.Public)
 		fileServer := http.StripPrefix("/public", http.FileServer(downloader))
 		publicHandler := func(c *gin.Context) {
 			if c.Request.URL.RawQuery != "" {
@@ -70,6 +78,7 @@ var vistor = group.G{
 		PostRegister,
 		GetToken,
 		GetUUID,
+		GetRssID,
 		PostFilter,
 		GetBlogs,
 		GetBlogID,
@@ -95,13 +104,13 @@ var user = group.G{
 var admin = group.G{
 	Path:       "admin",
 	Middleware: IsAdmin,
-	CustomFunc: func(r gin.IRouter) { r.StaticFS("/logs", http.Dir(webhook.Global().Path.Full.Logs)) },
+	CustomFunc: func(r gin.IRouter) { r.StaticFS("/logs", http.Dir(config.Path.Full.Logs)) },
 }
 
 var owner = group.G{
 	Path:       "owner",
 	Middleware: IsOwner,
-	CustomFunc: func(r gin.IRouter) { r.StaticFS("/root", http.Dir(webhook.Global().Path.Full.Root)) },
+	CustomFunc: func(r gin.IRouter) { r.StaticFS("/root", http.Dir(config.Path.Full.Root)) },
 	Handlers: []group.H{
 		GetExecute,
 		GetShutdown,
@@ -111,14 +120,93 @@ var owner = group.G{
 }
 
 var api = group.G{
-	Middlewares: []gin.HandlerFunc{group.CORS, Index}, //
+	Middlewares: []gin.HandlerFunc{group.CORS, Index},
 	Handlers:    []group.H{GetValid, GetPing},
 	Groups:      []group.G{vistor, user, admin, owner},
 }
 
-func load() error {
+var config *webhook.Config
+
+type OpenAPI struct {
+	*gin.Engine
+}
+
+func (o *OpenAPI) Initial(cfg *webhook.Config) error {
+	if o == nil || o.Engine == nil {
+		return ErrOpenAPINotExist
+	}
+	config = cfg
+
+	if BaseURL == "" {
+		baseURL, ok := cfg.Extra["base_url"]
+		if ok {
+			BaseURL, _ = baseURL.(string)
+		} else {
+			cfg.Extra["base_url"] = ""
+		}
+	}
+
+	if !AutoDownload {
+		autoDownload, ok := cfg.Extra["auto_download"]
+		if ok {
+			AutoDownload, _ = autoDownload.(bool)
+		} else {
+			cfg.Extra["auto_download"] = false
+		}
+	}
+
+	if JWTSecretKey == nil {
+		jwt, ok := cfg.Extra["jwt_secret_key"]
+		if ok {
+			s, _ := jwt.(string)
+			JWTSecretKey = []byte(s)
+		} else {
+			JWTSecretKey = []byte("my_secret_key")
+			cfg.Extra["jwt_secret_key"] = string(JWTSecretKey)
+		}
+	}
+
+	if Log == nil {
+		hook := &utils.DateHook{Format: filepath.Join(config.Path.Full.Logs, "2006-01-02.log")}
+		Log = &logrus.Logger{
+			Out:   hook,
+			Hooks: make(logrus.LevelHooks),
+			Formatter: &nested.Formatter{
+				HideKeys:        true,
+				NoColors:        true,
+				TimestampFormat: "15:04:05",
+				ShowFullLevel:   true,
+			},
+			Level: logrus.DebugLevel,
+		}
+		Log.AddHook(hook)
+	}
+
+	var err error
+	if UserDB == nil {
+		UserDB, err = gorm.Open(sqlite.Open(cfg.Path.Full.UserDB))
+		if err != nil {
+			return err
+		}
+		err = UserDB.AutoMigrate(&model.User{}, &model.Task{}, &model.Filter{}, &model.RequestLog{})
+		if err != nil {
+			return err
+		}
+	}
+
+	if BlogDB == nil {
+		BlogDB, err = gorm.Open(sqlite.Open(cfg.Path.Full.BlogDB))
+		if err != nil {
+			return err
+		}
+		err = BlogDB.AutoMigrate(&model.Blog{})
+		if err != nil {
+			return err
+		}
+	}
+
 	var users []UserClaims
-	err := UserDB().Find(&users).Error
+	err = UserDB.Find(&users).Error
 	if err != nil {
 		return err
 	}
@@ -128,22 +216,21 @@ func load() error {
 		}
 	}
 
-	upload := webhook.Global().Path.Full.Upload
-	return LoadDir(upload, upload)
-}
-
-func New() (r *gin.Engine) {
-	err := load()
+	err = LoadDir(cfg.Path.Full.Upload, cfg.Path.Full.Upload)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	return api.New()
-}
 
-func Default() (r *gin.Engine) {
-	err := load()
+	err = registrar.Initial(cfg.Extra)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	return api.Default()
+
+	err = cfg.Export()
+	if err != nil {
+		return err
+	}
+
+	api.Bind(o)
+	return nil
 }

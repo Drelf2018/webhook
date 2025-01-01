@@ -40,7 +40,7 @@ func PostBlog(ctx *gin.Context) (any, error) {
 		return 1, err
 	}
 	blog.Submitter = GetUID(ctx)
-	err = BlogDB().Create(blog).Error
+	err = BlogDB.Create(blog).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return 2, ErrBlogNotExist
 	}
@@ -48,8 +48,8 @@ func PostBlog(ctx *gin.Context) (any, error) {
 		return 3, err
 	}
 	var tasks []*model.Task
-	err = UserDB().Find(&tasks, "enable AND id IN (?)",
-		UserDB().Model(&model.Filter{}).Distinct("task_id").Where(
+	err = UserDB.Find(&tasks, "enable AND id IN (?)",
+		UserDB.Model(&model.Filter{}).Distinct("task_id").Where(
 			`(submitter = "" OR submitter = ?) AND
 			(platform = "" OR platform = ?) AND
 			(type = "" OR type = ?) AND
@@ -65,7 +65,7 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	}
 	go func() {
 		if len(tasks) != 0 {
-			UserDB().Create(model.NewTemplate(blog).RunTasks(tasks))
+			UserDB.Create(model.NewTemplate(blog).RunTasks(tasks))
 		}
 		if AutoDownload {
 			DownloadAssets(blog)
@@ -100,7 +100,7 @@ func PostTask(ctx *gin.Context) (any, error) {
 		return 2, ErrFilterNotExist
 	}
 	task.UserID = GetUID(ctx)
-	err = UserDB().Create(task).Error
+	err = UserDB.Create(task).Error
 	if err != nil {
 		return 3, err
 	}
@@ -110,7 +110,7 @@ func PostTask(ctx *gin.Context) (any, error) {
 // 获取任务
 func GetTaskID(ctx *gin.Context) (any, error) {
 	task := &model.Task{}
-	tx := UserDB().Preload("Filters").Preload("Logs").Limit(1).Find(task, "id = ? AND (public OR user_id = ?)", ctx.Param("id"), GetUID(ctx))
+	tx := UserDB.Preload("Filters").Preload("Logs").Limit(1).Find(task, "id = ? AND (public OR user_id = ?)", ctx.Param("id"), GetUID(ctx))
 	if tx.Error != nil {
 		return 1, tx.Error
 	}
@@ -122,7 +122,7 @@ func GetTaskID(ctx *gin.Context) (any, error) {
 
 // 移除任务
 func DeleteTaskID(ctx *gin.Context) (any, error) {
-	tx := UserDB().Delete(&model.Task{}, "id = ? AND user_id = ?", ctx.Param("id"), GetUID(ctx))
+	tx := UserDB.Delete(&model.Task{}, "id = ? AND user_id = ?", ctx.Param("id"), GetUID(ctx))
 	if tx.Error != nil {
 		return 1, tx.Error
 	}
@@ -135,7 +135,7 @@ func DeleteTaskID(ctx *gin.Context) (any, error) {
 // 获取自身信息
 func Get(ctx *gin.Context) (any, error) {
 	user := &model.User{UID: GetUID(ctx)}
-	err := UserDB().Preload("Tasks").Preload("Tasks.Filters").First(user).Error
+	err := UserDB.Preload("Tasks").Preload("Tasks.Filters").First(user).Error
 	if err != nil {
 		return 1, err
 	}
@@ -175,7 +175,7 @@ func PostTests(ctx *gin.Context) (any, error) {
 		return 2, ErrBlogNotExist
 	}
 	var tasks []*model.Task
-	err = UserDB().Find(&tasks, "user_id = ? AND id in ?", GetUID(ctx), data.Tasks).Error
+	err = UserDB.Find(&tasks, "user_id = ? AND id in ?", GetUID(ctx), data.Tasks).Error
 	if err != nil {
 		return 3, err
 	}

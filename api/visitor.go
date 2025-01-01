@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Drelf2018/webhook"
 	"github.com/Drelf2018/webhook/model"
 	"github.com/Drelf2018/webhook/registrar"
 	"github.com/Drelf2018/webhook/utils"
@@ -68,7 +67,7 @@ func PostRegister(ctx *gin.Context) (any, error) {
 	if u == nil {
 		return data, err
 	}
-	tx := UserDB().Limit(1).Find(u)
+	tx := UserDB.Limit(1).Find(u)
 	if tx.Error != nil {
 		return 1, tx.Error
 	}
@@ -77,18 +76,18 @@ func PostRegister(ctx *gin.Context) (any, error) {
 	}
 	// create user
 	user := u.(*model.User)
-	if user.UID == webhook.Global().Role.Owner {
+	if user.UID == config.Role.Owner {
 		user.Role = model.Owner
 	} else {
 		user.Role = model.Normal
-		for _, admin := range webhook.Global().Role.Admin {
+		for _, admin := range config.Role.Admin {
 			if user.UID == admin {
 				user.Role = model.Admin
 				break
 			}
 		}
 	}
-	err = UserDB().Create(user).Error
+	err = UserDB.Create(user).Error
 	if err != nil {
 		return 3, err
 	}
@@ -102,7 +101,7 @@ func GetToken(ctx *gin.Context) (data any, err error) {
 		return 1, err
 	}
 	user := &model.User{UID: uid}
-	tx := UserDB().Limit(1).Find(user)
+	tx := UserDB.Limit(1).Find(user)
 	if tx.Error != nil {
 		return 2, tx.Error
 	}
@@ -136,7 +135,7 @@ func GetToken(ctx *gin.Context) (data any, err error) {
 // 获取用户信息
 func GetUUID(ctx *gin.Context) (any, error) {
 	user := &model.User{UID: ctx.Param("uid")}
-	tx := UserDB().Limit(1).Find(user)
+	tx := UserDB.Limit(1).Find(user)
 	if tx.Error != nil {
 		return 1, tx.Error
 	}
@@ -146,22 +145,18 @@ func GetUUID(ctx *gin.Context) (any, error) {
 	return user, nil
 }
 
-// 筛选查询
-func PostFilter(ctx *gin.Context) (any, error) {
-	var f struct {
-		Filters  []model.Filter `json:"filters"`
-		Reply    bool           `json:"reply"`
-		Comments bool           `json:"comments"`
-		Order    string         `json:"order"`
-		Limit    int            `json:"limit"`
-		Offset   int            `json:"offset"`
-		Conds    []string       `json:"conds"`
-	}
-	err := ctx.ShouldBindJSON(&f)
-	if err != nil {
-		return 1, err
-	}
-	tx := BlogDB()
+type Filter struct {
+	Filters  []model.Filter `json:"filters"`
+	Reply    bool           `json:"reply"`
+	Comments bool           `json:"comments"`
+	Order    string         `json:"order"`
+	Limit    int            `json:"limit"`
+	Offset   int            `json:"offset"`
+	Conds    []string       `json:"conds"`
+}
+
+func FindBlogs(f Filter, dest any) error {
+	tx := BlogDB
 	if f.Reply {
 		tx = tx.Preload("Reply")
 	}
@@ -182,12 +177,22 @@ func PostFilter(ctx *gin.Context) (any, error) {
 	if f.Offset != 0 {
 		tx = tx.Offset(f.Offset)
 	}
-	filter := BlogDB().Model(&model.Blog{})
+	filter := BlogDB.Model(&model.Blog{})
 	for _, f := range f.Filters {
 		filter = filter.Or(f)
 	}
+	return tx.Where(filter).Find(dest, utils.StrToAny(f.Conds)...).Error
+}
+
+// 筛选查询
+func PostFilter(ctx *gin.Context) (any, error) {
+	var f Filter
+	err := ctx.ShouldBindJSON(&f)
+	if err != nil {
+		return 1, err
+	}
 	var blogs []model.Blog
-	err = tx.Where(filter).Find(&blogs, utils.StrToAny(f.Conds)...).Error
+	err = FindBlogs(f, &blogs)
 	if err != nil {
 		return 2, err
 	}
@@ -213,7 +218,7 @@ func GetBlogs(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 1, err
 	}
-	tx := BlogDB().Where(q)
+	tx := BlogDB.Where(q)
 	if q.Reply {
 		tx = tx.Preload("Reply")
 	}
@@ -245,7 +250,7 @@ func GetBlogs(ctx *gin.Context) (any, error) {
 // 查询单条博文
 func GetBlogID(ctx *gin.Context) (any, error) {
 	blog := &model.Blog{}
-	tx := BlogDB().Preload("Reply").Preload("Comments").Limit(1).Find(blog, "id = ?", ctx.Param("id"))
+	tx := BlogDB.Preload("Reply").Preload("Comments").Limit(1).Find(blog, "id = ?", ctx.Param("id"))
 	if tx.Error != nil {
 		return 1, tx.Error
 	}

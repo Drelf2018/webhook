@@ -28,7 +28,7 @@ func GetShutdown(ctx *gin.Context) (any, error) {
 
 func GetUserUID(ctx *gin.Context) (any, error) {
 	user := &model.User{UID: ctx.Param("uid")}
-	tx := UserDB().Preload("Tasks").Preload("Tasks.Filters").Preload("Tasks.Logs").Limit(1).Find(user)
+	tx := UserDB.Preload("Tasks").Preload("Tasks.Filters").Preload("Tasks.Logs").Limit(1).Find(user)
 	if tx.Error != nil {
 		return 1, tx.Error
 	}
@@ -45,7 +45,7 @@ func PostUpload(ctx *gin.Context) (any, error) {
 		return 1, err
 	}
 	errs := make([]string, 0)
-	upload := webhook.Global().Path.Full.Upload
+	upload := config.Path.Full.Upload
 	for fieldname, files := range form.File {
 		dir := filepath.Join(form.Value[fieldname]...)
 		if strings.HasPrefix(dir, "user") || strings.HasPrefix(dir, "admin") || strings.HasPrefix(dir, "owner") {

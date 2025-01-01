@@ -4,30 +4,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Drelf2018/webhook"
 	"github.com/Drelf2018/webhook/model"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 )
 
-var jwtSecretKey []byte
+var JWTSecretKey []byte
 
-func JWTSecretKey(*jwt.Token) (any, error) {
-	if jwtSecretKey == nil {
-		cfg := webhook.Global()
-		key, ok := cfg.Extra["jwt_secret_key"]
-		if ok {
-			jwtSecretKey = []byte(key.(string))
-		} else {
-			jwtSecretKey = []byte("my_secret_key")
-			cfg.Extra["jwt_secret_key"] = string(jwtSecretKey)
-			err := cfg.Export()
-			if err != nil {
-				return jwtSecretKey, err
-			}
-		}
-	}
-	return jwtSecretKey, nil
+func JWTSecretKeyFn(*jwt.Token) (any, error) {
+	return JWTSecretKey, nil
 }
 
 var tokenIssuedAt sync.Map // map[string]int64
@@ -51,12 +36,12 @@ func (c UserClaims) Valid() error {
 }
 
 func (c UserClaims) Token(update bool) (string, error) {
-	key, err := JWTSecretKey(nil)
+	key, err := JWTSecretKeyFn(nil)
 	if err != nil {
 		return "", err
 	}
 	if update {
-		err = UserDB().Updates(&c).Error
+		err = UserDB.Updates(&c).Error
 		if err != nil {
 			return "", err
 		}
@@ -81,7 +66,7 @@ func JWTAuth(ctx *gin.Context) (uid string, err error) {
 		return "", ErrAuthNotExist
 	}
 	user := &UserClaims{}
-	_, err = jwt.ParseWithClaims(token, user, JWTSecretKey)
+	_, err = jwt.ParseWithClaims(token, user, JWTSecretKeyFn)
 	if err != nil {
 		return "", err
 	}
@@ -94,6 +79,6 @@ func JWTUser(ctx *gin.Context) (user *model.User, err error) {
 		return nil, err
 	}
 	user = &model.User{UID: uid}
-	err = UserDB().First(user).Error
+	err = UserDB.First(user).Error
 	return
 }
