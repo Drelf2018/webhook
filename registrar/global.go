@@ -1,38 +1,29 @@
 package registrar
 
 import (
-	"github.com/Drelf2018/webhook"
 	"github.com/gin-gonic/gin"
 )
 
 var registrar Registrar
-var initialized bool
 
 func SetRegistrar(reg Registrar) {
 	registrar = reg
-	initialized = false
 }
 
 func SetRegistrarFunc(fn RegistrarFunc) {
 	registrar = fn
-	initialized = true
+}
+
+func Initial(extra map[string]any) error {
+	if registrar == nil {
+		return ErrNoRegistrar
+	}
+	return registrar.Initial(extra)
 }
 
 func Register(ctx *gin.Context) (user any, data any, err error) {
 	if registrar == nil {
 		return nil, -1, ErrNoRegistrar
-	}
-	if !initialized {
-		cfg := webhook.Global()
-		err = registrar.Initial(cfg.Extra)
-		if err != nil {
-			return nil, -2, err
-		}
-		err = cfg.Export()
-		if err != nil {
-			return nil, -3, err
-		}
-		initialized = true
 	}
 	return registrar.Register(ctx)
 }
