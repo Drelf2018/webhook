@@ -22,6 +22,7 @@ type Blog struct {
 	URL    string    `json:"url"`    // 博文网址
 	Text   string    `json:"text"`   // 文本内容
 	Time   time.Time `json:"time"`   // 发送时间
+	Title  string    `json:"title"`  // 文章标题
 	Source string    `json:"source"` // 博文来源
 	Edited bool      `json:"edited"` // 是否编辑
 
@@ -73,7 +74,7 @@ func (b Blog) String() string {
 		text = text[:MaxTextLength] + "..."
 	}
 	if b.Reply == nil {
-		return fmt.Sprintf("Blog(%d, %s, %s)", b.ID, b.Name, text)
+		return fmt.Sprintf("Blog(%s, %s, %s) (%d)", b.MID, b.Name, text, b.ID)
 	}
-	return fmt.Sprintf("Blog(%d, %s, %s, %s)", b.ID, b.Name, text, b.Reply)
+	return fmt.Sprintf("Blog(%s, %s, %s, %s) (%d)", b.MID, b.Name, text, b.Reply, b.ID)
 }
