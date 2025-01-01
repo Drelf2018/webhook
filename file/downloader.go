@@ -92,9 +92,8 @@ func (d *Downloader) Open(name string) (http.File, error) {
 	return os.Open(fullpath)
 }
 
-func (d *Downloader) Download(url string) error {
-	_, err := d.Open("/" + strings.Replace(url, ":/", "", 1))
-	return err
+func (d *Downloader) Download(url string) (http.File, error) {
+	return d.Open("/" + strings.Replace(url, ":/", "", 1))
 }
 
 var _ http.FileSystem = (*Downloader)(nil)
