@@ -35,7 +35,7 @@ func LoadFile(root, file string) {
 	if strings.HasPrefix(filename, "/index") && strings.HasSuffix(filename, ".html") {
 		indexFiles["/"] = file
 		indexFiles["/index.html"] = file
-		version.Idx = append(version.Idx, filename)
+		version.Index = append(version.Index, filename)
 	}
 }
 
