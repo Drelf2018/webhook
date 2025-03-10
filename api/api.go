@@ -78,7 +78,6 @@ var vistor = group.G{
 		PostRegister,
 		GetToken,
 		GetUUID,
-		GetRssID,
 		PostFilter,
 		GetBlogs,
 		GetBlogID,
@@ -136,15 +135,6 @@ func (o *OpenAPI) Initial(cfg *webhook.Config) error {
 		return ErrOpenAPINotExist
 	}
 	config = cfg
-
-	if BaseURL == "" {
-		baseURL, ok := cfg.Extra["base_url"]
-		if ok {
-			BaseURL, _ = baseURL.(string)
-		} else {
-			cfg.Extra["base_url"] = ""
-		}
-	}
 
 	if !AutoDownload {
 		autoDownload, ok := cfg.Extra["auto_download"]
