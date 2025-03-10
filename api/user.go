@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Drelf2018/webhook/model"
 	"gorm.io/gorm"
@@ -13,23 +14,50 @@ import (
 // 开启自动下载会极大的占用带宽 建议发送完所有 hook 请求后再下载
 var AutoDownload bool
 
-// 下载资源
-func DownloadAssets(blog *model.Blog) {
-	if blog == nil {
-		return
+type ErrorSlice []error
+
+func (es ErrorSlice) Error() string {
+	err := make([]string, 0, len(es))
+	for _, e := range es {
+		err = append(err, e.Error())
 	}
+	return strings.Join(err, "; ")
+}
+
+// 下载资源
+func DownloadAssets(blog *model.Blog) error {
+	if blog == nil {
+		return nil
+	}
+	es := make(ErrorSlice, 0)
 	if blog.Avatar != "" {
-		downloader.Download(blog.Avatar)
+		_, err := downloader.Download(blog.Avatar)
+		if err != nil {
+			es = append(es, err)
+		}
 	}
 	for _, url := range blog.Assets {
-		downloader.Download(url)
+		_, err := downloader.Download(url)
+		if err != nil {
+			es = append(es, err)
+		}
 	}
 	for _, url := range blog.Banner {
-		downloader.Download(url)
+		_, err := downloader.Download(url)
+		if err != nil {
+			es = append(es, err)
+		}
 	}
 	if blog.Reply != nil {
-		go DownloadAssets(blog.Reply)
+		err := DownloadAssets(blog.Reply)
+		if err != nil {
+			es = append(es, err)
+		}
 	}
+	if len(es) == 0 {
+		return nil
+	}
+	return es
 }
 
 // 提交博文
@@ -65,10 +93,16 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	}
 	go func() {
 		if len(tasks) != 0 {
-			UserDB.Create(model.NewTemplate(blog).RunTasks(tasks))
+			err := UserDB.Create(model.NewTemplate(blog).RunTasks(tasks)).Error
+			if err != nil {
+				Log.Errorf(`127.0.0.1 POST "/blog": %s`, err)
+			}
 		}
 		if AutoDownload {
-			DownloadAssets(blog)
+			err := DownloadAssets(blog)
+			if err != nil {
+				Log.Errorf(`127.0.0.1 POST "/blog": %s`, err)
+			}
 		}
 	}()
 	return blog.ID, nil
