@@ -22,10 +22,47 @@ import (
 
 var downloader *file.Downloader
 
+// 请求转发 https://blog.csdn.net/qq_29799655/article/details/113841064
+func ForwardURL(ctx *gin.Context) {
+	// 复刻请求
+	req := ctx.Request.Clone(context.Background())
+	url := strings.Replace(req.URL.Path, "/forward/", "", 1)
+	req.URL.Scheme, url, _ = strings.Cut(url, "/")
+	req.URL.Host, url, _ = strings.Cut(url, "/")
+	req.URL.Path = "/" + url
+	req.Host = req.URL.Host
+	req.RemoteAddr = ""
+	req.RequestURI = ""
+	// 发送新请求
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, group.Response{Code: 1, Error: err.Error()})
+		return
+	}
+	// 写入状态码和 Header
+	ctx.Status(resp.StatusCode)
+	header := ctx.Writer.Header()
+	for k, vs := range resp.Header {
+		for _, v := range vs {
+			header.Add(k, v)
+		}
+	}
+	// 将 Body 写入原请求中
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		ctx.JSON(http.StatusOK, group.Response{Code: 2, Error: err.Error()})
+		return
+	}
+	ctx.Writer.Write(b)
+}
+
 var vistor = group.G{
 	Middleware: LogMiddleware,
 	CustomFunc: func(r gin.IRouter) {
-		// 下载文件的处理函数
+		// 请求转发
+		r.Any("/forward/*url", ForwardURL)
+
+		// 下载文件
 		downloader = file.NewDownloader(config.Path.Full.Public)
 		fileServer := http.StripPrefix("/public", http.FileServer(downloader))
 		publicHandler := func(c *gin.Context) {
@@ -37,40 +74,6 @@ var vistor = group.G{
 		}
 		r.GET("/public/*filepath", publicHandler)
 		r.HEAD("/public/*filepath", publicHandler)
-
-		// 请求转发的处理函数 https://blog.csdn.net/qq_29799655/article/details/113841064
-		r.Any("/forward/*url", func(ctx *gin.Context) {
-			// 复刻请求
-			req := ctx.Request.Clone(context.Background())
-			url := strings.Replace(req.URL.Path, "/forward/", "", 1)
-			req.URL.Scheme, url, _ = strings.Cut(url, "/")
-			req.URL.Host, url, _ = strings.Cut(url, "/")
-			req.URL.Path = "/" + url
-			req.Host = req.URL.Host
-			req.RemoteAddr = ""
-			req.RequestURI = ""
-			// 发送新请求
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				ctx.JSON(http.StatusOK, group.Response{Code: 1, Error: err.Error()})
-				return
-			}
-			// 写入状态码和 Header
-			ctx.Status(resp.StatusCode)
-			header := ctx.Writer.Header()
-			for k, vs := range resp.Header {
-				for _, v := range vs {
-					header.Add(k, v)
-				}
-			}
-			// 将 Body 写入原请求中
-			b, err := io.ReadAll(resp.Body)
-			if err != nil {
-				ctx.JSON(http.StatusOK, group.Response{Code: 2, Error: err.Error()})
-				return
-			}
-			ctx.Writer.Write(b)
-		})
 	},
 	Handlers: []group.H{
 		GetVersion,
