@@ -24,15 +24,6 @@ type Registrar struct {
 	Password string
 }
 
-func (r *Registrar) Initial(cfg *webhook.Config) error {
-	r.UID = cfg.Role.Owner
-	r.Password = cfg.Extra["password"].(string)
-	if r.UID == "" || r.Password == "" {
-		return ErrMissing
-	}
-	return nil
-}
-
 func (r *Registrar) Register(ctx *gin.Context) (user any, data any, err error) {
 	uid, password, err := registrar.BasicAuth(ctx)
 	if err != nil {
@@ -53,25 +44,52 @@ func (r *Registrar) Register(ctx *gin.Context) (user any, data any, err error) {
 
 var _ registrar.Registrar = (*Registrar)(nil)
 
-func init() {
-	registrar.SetRegistrar(&Registrar{})
+func logError(err error) {
+	println(err.Error())
+	os.WriteFile("error.log", []byte(err.Error()), os.ModePerm)
+}
+
+func pause() {
+	reader := bufio.NewReader(os.Stdin)
+	reader.ReadString('\n')
 }
 
 func main() {
-	gin.SetMode(gin.ReleaseMode)
-	cfg := &webhook.Config{
+	cfg := &api.Config{
 		Filename: "config.toml",
+		Server:   api.Server{Mode: gin.ReleaseMode},
 		Extra:    map[string]any{"password": ""},
 	}
-	err := webhook.Run(&api.OpenAPI{Engine: gin.New()}, cfg)
+	engine := gin.New()
+	err := api.Initial(engine, cfg)
+
 	if _, ok := err.(*fs.PathError); ok {
 		initial.Initial(cfg)
 		cfg.Export()
 		fmt.Println("请完善配置文件 按下回车键退出")
-		reader := bufio.NewReader(os.Stdin)
-		reader.ReadString('\n')
+		pause()
+		return
 	} else if err != nil {
-		fmt.Printf("%v\n", err)
-		os.WriteFile("error.log", []byte(err.Error()), os.ModePerm)
+		logError(err)
+		pause()
+		return
+	}
+
+	r := &Registrar{
+		UID:      cfg.Role.Owner,
+		Password: cfg.Extra["password"].(string),
+	}
+	if r.UID == "" || r.Password == "" {
+		logError(ErrMissing)
+		pause()
+		return
+	}
+
+	registrar.SetRegistrar(r)
+
+	err = webhook.Run(cfg.Server.Addr(), engine)
+	if err != nil {
+		logError(err)
+		pause()
 	}
 }
