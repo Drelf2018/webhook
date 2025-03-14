@@ -11,9 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 开启自动下载会极大的占用带宽 建议发送完所有 hook 请求后再下载
-var AutoDownload bool
-
 type ErrorSlice []error
 
 func (es ErrorSlice) Error() string {
