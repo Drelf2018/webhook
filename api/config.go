@@ -1,6 +1,7 @@
-package webhook
+package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,7 +13,19 @@ import (
 	"github.com/Drelf2018/initial"
 	"github.com/Drelf2018/webhook/utils"
 	"gopkg.in/yaml.v3"
+
+	_ "unsafe"
 )
+
+//go:linkname running github.com/Drelf2018/webhook.running
+var running context.Context
+
+//go:linkname cancel github.com/Drelf2018/webhook.cancel
+var cancel context.CancelFunc
+
+var stop func() bool
+
+var config *Config
 
 // webhook 配置
 type Config struct {
@@ -64,6 +77,23 @@ func (c *Config) Export() (err error) {
 	}
 	return os.WriteFile(c.Filename, b, os.ModePerm)
 }
+
+func (c *Config) AfterInitial() {
+	if !AutoDownload {
+		AutoDownload, _ = LoadOrStore(c.Extra, AutoDownloadKey, false)
+	}
+
+	if JWTSecretKey == nil {
+		secret, _ := LoadOrStore(c.Extra, JWTSecretKeyKey, "my_secret_key")
+		JWTSecretKey = []byte(secret)
+	}
+
+	if !AutoSave {
+		AutoSave, _ = LoadOrStore(c.Extra, AutoSaveKey, false)
+	}
+}
+
+var _ initial.AfterInitial1 = (*Config)(nil)
 
 type Path struct {
 	Root   string `toml:"root"   yaml:"root"   json:"root"   default:"resource"`               // 程序根目录
@@ -119,24 +149,7 @@ func (p *Path) AfterInitial() (err error) {
 	if err != nil {
 		return
 	}
-	err = os.MkdirAll(p.Full.Upload, os.ModePerm)
-	if err != nil {
-		return
-	}
-	stop = time.AfterFunc(utils.NextTimeDuration(4, 0, 0), func() {
-		p.CopyBlogDB()
-		ticker := time.NewTicker(24 * time.Hour)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-Quit.Done():
-				return
-			case <-ticker.C:
-				go p.CopyBlogDB()
-			}
-		}
-	}).Stop
-	return
+	return os.MkdirAll(p.Full.Upload, os.ModePerm)
 }
 
 var _ initial.AfterInitial2 = (*Path)(nil)

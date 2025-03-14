@@ -6,12 +6,11 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	group "github.com/Drelf2018/gin-group"
-	"github.com/Drelf2018/webhook"
-
+	"github.com/Drelf2018/initial"
 	"github.com/Drelf2018/webhook/model"
-	"github.com/Drelf2018/webhook/registrar"
 	"github.com/Drelf2018/webhook/utils"
 	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/gin-gonic/gin"
@@ -127,40 +126,37 @@ var api = group.G{
 	Groups:      []group.G{vistor, user, admin, owner},
 }
 
-var config *webhook.Config
-
-type OpenAPI struct {
-	*gin.Engine
-}
-
-func (o *OpenAPI) Initial(cfg *webhook.Config) error {
-	if o == nil || o.Engine == nil {
+func Initial(engine *gin.Engine, cfg *Config) error {
+	if engine == nil {
 		return ErrOpenAPINotExist
 	}
-	config = cfg
 
-	if !AutoDownload {
-		autoDownload, ok := cfg.Extra["auto_download"]
-		if ok {
-			AutoDownload, _ = autoDownload.(bool)
-		} else {
-			cfg.Extra["auto_download"] = false
-		}
+	if cfg == nil {
+		cfg = &Config{Filename: "config.toml"}
+	}
+	if cfg.Role.Admin == nil {
+		cfg.Role.Admin = make([]string, 0)
+	}
+	if cfg.Extra == nil {
+		cfg.Extra = make(map[string]any)
 	}
 
-	if JWTSecretKey == nil {
-		jwt, ok := cfg.Extra["jwt_secret_key"]
-		if ok {
-			s, _ := jwt.(string)
-			JWTSecretKey = []byte(s)
-		} else {
-			JWTSecretKey = []byte("my_secret_key")
-			cfg.Extra["jwt_secret_key"] = string(JWTSecretKey)
-		}
+	err := cfg.Import()
+	if err != nil {
+		return err
+	}
+	err = initial.Initial(cfg)
+	if err != nil {
+		return err
+	}
+
+	switch cfg.Server.Mode {
+	case gin.ReleaseMode, gin.DebugMode, gin.TestMode:
+		gin.SetMode(cfg.Server.Mode)
 	}
 
 	if Log == nil {
-		hook := &utils.DateHook{Format: filepath.Join(config.Path.Full.Logs, "2006-01-02.log")}
+		hook := &utils.DateHook{Format: filepath.Join(cfg.Path.Full.Logs, "2006-01-02.log")}
 		Log = &logrus.Logger{
 			Out:   hook,
 			Hooks: make(logrus.LevelHooks),
@@ -175,7 +171,6 @@ func (o *OpenAPI) Initial(cfg *webhook.Config) error {
 		Log.AddHook(hook)
 	}
 
-	var err error
 	if UserDB == nil {
 		UserDB, err = gorm.Open(sqlite.Open(cfg.Path.Full.UserDB))
 		if err != nil {
@@ -214,16 +209,30 @@ func (o *OpenAPI) Initial(cfg *webhook.Config) error {
 		return err
 	}
 
-	err = registrar.Initial(cfg)
-	if err != nil {
-		return err
-	}
-
 	err = cfg.Export()
 	if err != nil {
 		return err
 	}
 
-	api.Bind(o)
+	config = cfg
+
+	api.Bind(engine)
+
+	if AutoSave {
+		stop = time.AfterFunc(utils.NextTimeDuration(4, 0, 0), func() {
+			cfg.Path.CopyBlogDB()
+			ticker := time.NewTicker(24 * time.Hour)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-running.Done():
+					return
+				case <-ticker.C:
+					go cfg.Path.CopyBlogDB()
+				}
+			}
+		}).Stop
+	}
+
 	return nil
 }

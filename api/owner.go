@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Drelf2018/webhook"
 	"github.com/Drelf2018/webhook/model"
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/gin-gonic/gin"
@@ -22,7 +21,12 @@ func GetShutdown(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 1, err
 	}
-	webhook.Shutdown()
+	if stop != nil {
+		stop()
+	}
+	if cancel != nil {
+		cancel()
+	}
 	return "人生有梦，各自精彩！", nil
 }
 

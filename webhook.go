@@ -4,68 +4,22 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Drelf2018/initial"
-	"github.com/gin-gonic/gin"
+	_ "unsafe"
 )
 
-var stop func() bool
-var Quit, cancel = context.WithCancel(context.Background())
+//go:linkname running
+var running context.Context
 
-func Shutdown() {
-	stop()
-	cancel()
+//go:linkname cancel
+var cancel context.CancelFunc
+
+func init() {
+	running, cancel = context.WithCancel(context.Background())
 }
 
-type Handler interface {
-	http.Handler
-	Initial(*Config) error
-}
-
-func run(handler Handler, cfg *Config) error {
-	if cfg == nil {
-		cfg = &Config{Filename: "config.toml"}
-	}
-	if cfg.Role.Admin == nil {
-		cfg.Role.Admin = make([]string, 0)
-	}
-	if cfg.Extra == nil {
-		cfg.Extra = make(map[string]any)
-	}
-
-	err := cfg.Import()
-	if err != nil {
-		return err
-	}
-	err = initial.Initial(cfg)
-	if err != nil {
-		return err
-	}
-	err = cfg.Export()
-	if err != nil {
-		return err
-	}
-
-	switch cfg.Server.Mode {
-	case gin.ReleaseMode, gin.DebugMode, gin.TestMode:
-		gin.SetMode(cfg.Server.Mode)
-	}
-
-	err = handler.Initial(cfg)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func Run(handler Handler, cfg *Config) error {
-	err := run(handler, cfg)
-	if err != nil {
-		return err
-	}
-
+func Run(addr string, handler http.Handler) error {
 	srv := &http.Server{
-		Addr:    cfg.Server.Addr(),
+		Addr:    addr,
 		Handler: handler,
 	}
 
@@ -73,15 +27,7 @@ func Run(handler Handler, cfg *Config) error {
 	// it won't block the graceful shutdown handling below
 	go srv.ListenAndServe()
 
-	<-Quit.Done()
+	<-running.Done()
 
 	return srv.Shutdown(context.Background())
-}
-
-func RunForever(handler Handler, cfg *Config) error {
-	err := run(handler, cfg)
-	if err != nil {
-		return err
-	}
-	return http.ListenAndServe(cfg.Server.Addr(), handler)
 }
