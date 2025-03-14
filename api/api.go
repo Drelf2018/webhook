@@ -9,7 +9,7 @@ import (
 
 	group "github.com/Drelf2018/gin-group"
 	"github.com/Drelf2018/webhook"
-	"github.com/Drelf2018/webhook/file"
+
 	"github.com/Drelf2018/webhook/model"
 	"github.com/Drelf2018/webhook/registrar"
 	"github.com/Drelf2018/webhook/utils"
@@ -20,7 +20,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var downloader *file.Downloader
+var downloader *utils.Downloader
 
 // 请求转发 https://blog.csdn.net/qq_29799655/article/details/113841064
 func ForwardURL(ctx *gin.Context) {
@@ -63,7 +63,7 @@ var vistor = group.G{
 		r.Any("/forward/*url", ForwardURL)
 
 		// 下载文件
-		downloader = file.NewDownloader(config.Path.Full.Public)
+		downloader = utils.NewDownloader(config.Path.Full.Public)
 		fileServer := http.StripPrefix("/public", http.FileServer(downloader))
 		publicHandler := func(c *gin.Context) {
 			if c.Request.URL.RawQuery != "" {
