@@ -3,58 +3,48 @@ package api
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/Drelf2018/webhook/model"
+	"github.com/Drelf2018/webhook/utils"
 	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
 )
-
-type ErrorSlice []error
-
-func (es ErrorSlice) Error() string {
-	err := make([]string, 0, len(es))
-	for _, e := range es {
-		err = append(err, e.Error())
-	}
-	return strings.Join(err, "; ")
-}
 
 // 下载资源
 func DownloadAssets(blog *model.Blog) error {
 	if blog == nil {
 		return nil
 	}
-	es := make(ErrorSlice, 0)
+	errs := make(utils.JoinError, 0)
 	if blog.Avatar != "" {
 		_, err := downloader.Download(blog.Avatar)
 		if err != nil {
-			es = append(es, err)
+			errs = append(errs, err)
 		}
 	}
 	for _, url := range blog.Assets {
 		_, err := downloader.Download(url)
 		if err != nil {
-			es = append(es, err)
+			errs = append(errs, err)
 		}
 	}
 	for _, url := range blog.Banner {
 		_, err := downloader.Download(url)
 		if err != nil {
-			es = append(es, err)
+			errs = append(errs, err)
 		}
 	}
 	if blog.Reply != nil {
 		err := DownloadAssets(blog.Reply)
 		if err != nil {
-			es = append(es, err)
+			errs = append(errs, err)
 		}
 	}
-	if len(es) == 0 {
+	if len(errs) == 0 {
 		return nil
 	}
-	return es
+	return errs
 }
 
 // 提交博文

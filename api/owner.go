@@ -48,12 +48,12 @@ func PostUpload(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 1, err
 	}
-	errs := make([]string, 0)
+	errs := make(utils.JoinError, 0)
 	upload := config.Path.Full.Upload
 	for fieldname, files := range form.File {
 		dir := filepath.Join(form.Value[fieldname]...)
 		if strings.HasPrefix(dir, "user") || strings.HasPrefix(dir, "admin") || strings.HasPrefix(dir, "owner") {
-			errs = append(errs, fmt.Sprintf("dir \"%s\" has invalid prefix", dir))
+			errs = append(errs, fmt.Errorf("dir \"%s\" has invalid prefix", dir))
 			continue
 		}
 		for _, file := range files {
@@ -63,13 +63,13 @@ func PostUpload(ctx *gin.Context) (any, error) {
 			filename := filepath.Join(upload, dir, file.Filename)
 			err := ctx.SaveUploadedFile(file, filename)
 			if err != nil {
-				errs = append(errs, err.Error())
+				errs = append(errs, err)
 			}
 			LoadFile(upload, filename)
 		}
 	}
 	if len(errs) != 0 {
-		return 2, fmt.Errorf("webhook/api: upload files error: %s", strings.Join(errs, "; "))
+		return 2, fmt.Errorf("webhook/api: upload files error: %w", errs)
 	}
 	return "success", nil
 }
