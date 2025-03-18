@@ -47,6 +47,29 @@ func DownloadAssets(blog *model.Blog) error {
 	return errs
 }
 
+// 关注中博文查询
+func GetFollowing(ctx *gin.Context) (any, error) {
+	f := Filter{
+		Reply:    true,
+		Comments: true,
+		Order:    "time desc",
+	}
+	err := ctx.ShouldBindQuery(&f)
+	if err != nil {
+		return 1, err
+	}
+	err = UserDB.Where("task_id in (?)", UserDB.Model(&model.Task{}).Distinct("id").Where("user_id = ?", GetUID(ctx))).Find(&f.Filters).Error
+	if err != nil {
+		return 2, err
+	}
+	var blogs []model.Blog
+	err = FindBlogs(f, &blogs)
+	if err != nil {
+		return 3, err
+	}
+	return blogs, nil
+}
+
 // 提交博文
 func PostBlog(ctx *gin.Context) (any, error) {
 	blog := &model.Blog{}

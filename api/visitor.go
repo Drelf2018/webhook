@@ -150,12 +150,12 @@ func GetUUID(ctx *gin.Context) (any, error) {
 
 type Filter struct {
 	Filters  []model.Filter `json:"filters"`
-	Reply    bool           `json:"reply"`
-	Comments bool           `json:"comments"`
-	Order    string         `json:"order"`
-	Limit    int            `json:"limit"`
-	Offset   int            `json:"offset"`
-	Conds    []string       `json:"conds"`
+	Reply    bool           `json:"reply"    form:"reply"`
+	Comments bool           `json:"comments" form:"comments"`
+	Order    string         `json:"order"    form:"order"`
+	Limit    int            `json:"limit"    form:"limit"`
+	Offset   int            `json:"offset"   form:"offset"`
+	Conds    []string       `json:"conds"    form:"conds"`
 }
 
 func FindBlogs(f Filter, dest any) error {
@@ -182,6 +182,7 @@ func FindBlogs(f Filter, dest any) error {
 	}
 	filter := BlogDB.Model(&model.Blog{})
 	for _, f := range f.Filters {
+		f.TaskID = 0
 		filter = filter.Or(f)
 	}
 	return tx.Where(filter).Find(dest, utils.StrToAny(f.Conds)...).Error

@@ -90,6 +90,7 @@ var user = group.G{
 	Path:       "user",
 	Middleware: IsUser,
 	Handlers: []group.H{
+		GetFollowing,
 		PostBlog,
 		PostTask,
 		GetTaskID,
