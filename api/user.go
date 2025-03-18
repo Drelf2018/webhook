@@ -78,20 +78,20 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 4, fmt.Errorf("webhook/api: %s: %v", blog, err)
 	}
-	go func() {
+	go func(c *gin.Context) {
 		if len(tasks) != 0 {
 			err := UserDB.Create(model.NewTemplate(blog).RunTasks(tasks)).Error
 			if err != nil {
-				Log.Errorf(`127.0.0.1 POST "/blog": %s`, err)
+				Error(c, err)
 			}
 		}
 		if AutoDownload {
 			err := DownloadAssets(blog)
 			if err != nil {
-				Log.Errorf(`127.0.0.1 POST "/blog": %s`, err)
+				Error(c, err)
 			}
 		}
-	}()
+	}(ctx.Copy())
 	return blog.ID, nil
 }
 

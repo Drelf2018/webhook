@@ -3,23 +3,26 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+
+	_ "unsafe"
 )
 
-var Log *logrus.Logger
+//go:linkname logger
+var logger *logrus.Logger
 
 func Info(ctx *gin.Context) {
 	if value, exists := ctx.Get(MagicUIDKey); exists {
-		Log.Infof(`%s %s "%s" (%s)`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL, value)
+		logger.Infof(`%s %s "%s" (%s)`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL, value)
 	} else {
-		Log.Infof(`%s %s "%s"`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL)
+		logger.Infof(`%s %s "%s"`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL)
 	}
 }
 
 func Error(ctx *gin.Context, err error) {
 	if value, exists := ctx.Get(MagicUIDKey); exists {
-		Log.Errorf(`%s %s "%s": %s (%s)`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL, err, value)
+		logger.Errorf(`%s %s "%s": %s (%s)`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL, err, value)
 	} else {
-		Log.Errorf(`%s %s "%s": %s`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL, err)
+		logger.Errorf(`%s %s "%s": %s`, ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL, err)
 	}
 }
 
