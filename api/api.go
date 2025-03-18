@@ -120,17 +120,13 @@ var owner = group.G{
 	},
 }
 
-var api = group.G{
+var API = group.G{
 	Middlewares: []gin.HandlerFunc{group.CORS, Index},
 	Handlers:    []group.H{GetValid, GetPing},
 	Groups:      []group.G{vistor, user, admin, owner},
 }
 
-func Initial(engine *gin.Engine, cfg *Config) error {
-	if engine == nil {
-		return ErrOpenAPINotExist
-	}
-
+func Initial(cfg *Config) error {
 	if cfg == nil {
 		cfg = &Config{Filename: "config.toml"}
 	}
@@ -148,27 +144,6 @@ func Initial(engine *gin.Engine, cfg *Config) error {
 	err = initial.Initial(cfg)
 	if err != nil {
 		return err
-	}
-
-	switch cfg.Server.Mode {
-	case gin.ReleaseMode, gin.DebugMode, gin.TestMode:
-		gin.SetMode(cfg.Server.Mode)
-	}
-
-	if Log == nil {
-		hook := &utils.DateHook{Format: filepath.Join(cfg.Path.Full.Logs, "2006-01-02.log")}
-		Log = &logrus.Logger{
-			Out:   hook,
-			Hooks: make(logrus.LevelHooks),
-			Formatter: &nested.Formatter{
-				HideKeys:        true,
-				NoColors:        true,
-				TimestampFormat: "15:04:05",
-				ShowFullLevel:   true,
-			},
-			Level: logrus.DebugLevel,
-		}
-		Log.AddHook(hook)
 	}
 
 	if UserDB == nil {
@@ -214,9 +189,26 @@ func Initial(engine *gin.Engine, cfg *Config) error {
 		return err
 	}
 
-	config = cfg
+	switch cfg.Server.Mode {
+	case gin.ReleaseMode, gin.DebugMode, gin.TestMode:
+		gin.SetMode(cfg.Server.Mode)
+	}
 
-	api.Bind(engine)
+	if logger == nil {
+		hook := &utils.DateHook{Format: filepath.Join(cfg.Path.Full.Logs, "2006-01-02.log")}
+		logger = &logrus.Logger{
+			Out:   hook,
+			Hooks: make(logrus.LevelHooks),
+			Formatter: &nested.Formatter{
+				HideKeys:        true,
+				NoColors:        true,
+				TimestampFormat: "15:04:05",
+				ShowFullLevel:   true,
+			},
+			Level: logrus.DebugLevel,
+		}
+		logger.AddHook(hook)
+	}
 
 	if AutoSave {
 		stop = time.AfterFunc(utils.NextTimeDuration(4, 0, 0), func() {
@@ -233,6 +225,8 @@ func Initial(engine *gin.Engine, cfg *Config) error {
 			}
 		}).Stop
 	}
+
+	config = cfg
 
 	return nil
 }

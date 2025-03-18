@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 
 	"github.com/Drelf2018/initial"
@@ -44,52 +43,63 @@ func (r *Registrar) Register(ctx *gin.Context) (user any, data any, err error) {
 
 var _ registrar.Registrar = (*Registrar)(nil)
 
-func logError(err error) {
-	println(err.Error())
-	os.WriteFile("error.log", []byte(err.Error()), os.ModePerm)
-}
-
 func pause() {
+	println("按任意键继续. . .")
 	reader := bufio.NewReader(os.Stdin)
 	reader.ReadString('\n')
 }
 
+func log(err error) {
+	os.WriteFile("error.log", []byte(fmt.Sprintf("%#v: %s", err, err)), os.ModePerm)
+	fmt.Printf("发生错误: %s，", err.Error())
+	pause()
+}
+
 func main() {
+	gin.SetMode(gin.ReleaseMode)
+
 	cfg := &api.Config{
 		Filename: "config.toml",
-		Server:   api.Server{Mode: gin.ReleaseMode},
 		Extra:    map[string]any{"password": ""},
 	}
-	engine := gin.New()
-	err := api.Initial(engine, cfg)
 
-	if _, ok := err.(*fs.PathError); ok {
-		initial.Initial(cfg)
-		cfg.Export()
-		fmt.Println("请完善配置文件 按下回车键退出")
-		pause()
-		return
-	} else if err != nil {
-		logError(err)
+	if _, err := os.Stat(cfg.Filename); err != nil {
+		err = initial.Initial(cfg)
+		if err != nil {
+			log(err)
+			return
+		}
+
+		err = cfg.Export()
+		if err != nil {
+			log(err)
+			return
+		}
+
+		fmt.Printf("请完善 %s 配置文件，", cfg.Filename)
 		pause()
 		return
 	}
 
-	r := &Registrar{
-		UID:      cfg.Role.Owner,
-		Password: cfg.Extra["password"].(string),
+	err := api.Initial(cfg)
+	if err != nil {
+		log(err)
+		return
 	}
+
+	r := &Registrar{UID: cfg.Role.Owner}
+	r.Password, _ = api.LoadOrStore(cfg.Extra, "password", "")
 	if r.UID == "" || r.Password == "" {
-		logError(ErrMissing)
-		pause()
+		log(ErrMissing)
 		return
 	}
-
 	registrar.SetRegistrar(r)
+
+	engine := gin.New()
+	api.API.Bind(engine)
 
 	err = webhook.Run(cfg.Server.Addr(), engine)
 	if err != nil {
-		logError(err)
-		pause()
+		log(err)
 	}
 }
