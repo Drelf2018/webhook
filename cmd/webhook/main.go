@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/Drelf2018/initial"
@@ -14,6 +15,9 @@ import (
 	"github.com/Drelf2018/webhook/model"
 	"github.com/Drelf2018/webhook/registrar"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+
+	_ "unsafe"
 )
 
 var ErrMissing = errors.New("webhook/cmd/webhook: the owner username or password is missing")
@@ -55,6 +59,9 @@ func log(err error) {
 	pause()
 }
 
+//go:linkname logger github.com/Drelf2018/webhook/api.logger
+var logger *logrus.Logger
+
 func main() {
 	gin.SetMode(gin.ReleaseMode)
 
@@ -86,6 +93,8 @@ func main() {
 		log(err)
 		return
 	}
+
+	logger.Out = io.MultiWriter(os.Stderr, logger.Out)
 
 	r := &Registrar{UID: cfg.Role.Owner}
 	r.Password, _ = api.LoadOrStore(cfg.Extra, "password", "")
