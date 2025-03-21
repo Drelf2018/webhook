@@ -6,7 +6,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io/fs"
+	"io"
 	"os"
 
 	"github.com/Drelf2018/initial"
@@ -15,6 +15,9 @@ import (
 	"github.com/Drelf2018/webhook/model"
 	"github.com/Drelf2018/webhook/registrar"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+
+	_ "unsafe"
 )
 
 var ErrMissing = errors.New("webhook/cmd/webhook: the owner username or password is missing")
@@ -22,15 +25,6 @@ var ErrMissing = errors.New("webhook/cmd/webhook: the owner username or password
 type Registrar struct {
 	UID      string
 	Password string
-}
-
-func (r *Registrar) Initial(cfg *webhook.Config) error {
-	r.UID = cfg.Role.Owner
-	r.Password = cfg.Extra["password"].(string)
-	if r.UID == "" || r.Password == "" {
-		return ErrMissing
-	}
-	return nil
 }
 
 func (r *Registrar) Register(ctx *gin.Context) (user any, data any, err error) {
@@ -53,25 +47,68 @@ func (r *Registrar) Register(ctx *gin.Context) (user any, data any, err error) {
 
 var _ registrar.Registrar = (*Registrar)(nil)
 
-func init() {
-	registrar.SetRegistrar(&Registrar{})
+func pause() {
+	println("按任意键继续. . .")
+	reader := bufio.NewReader(os.Stdin)
+	reader.ReadString('\n')
 }
+
+func log(err error) {
+	os.WriteFile("error.log", []byte(fmt.Sprintf("%#v: %s", err, err)), os.ModePerm)
+	fmt.Printf("发生错误: %s，", err.Error())
+	pause()
+}
+
+//go:linkname logger github.com/Drelf2018/webhook/api.logger
+var logger *logrus.Logger
 
 func main() {
 	gin.SetMode(gin.ReleaseMode)
-	cfg := &webhook.Config{
+
+	cfg := &api.Config{
 		Filename: "config.toml",
 		Extra:    map[string]any{"password": ""},
 	}
-	err := webhook.Run(&api.OpenAPI{Engine: gin.New()}, cfg)
-	if _, ok := err.(*fs.PathError); ok {
-		initial.Initial(cfg)
-		cfg.Export()
-		fmt.Println("请完善配置文件 按下回车键退出")
-		reader := bufio.NewReader(os.Stdin)
-		reader.ReadString('\n')
-	} else if err != nil {
-		fmt.Printf("%v\n", err)
-		os.WriteFile("error.log", []byte(err.Error()), os.ModePerm)
+
+	if _, err := os.Stat(cfg.Filename); err != nil {
+		err = initial.Initial(cfg)
+		if err != nil {
+			log(err)
+			return
+		}
+
+		err = cfg.Export()
+		if err != nil {
+			log(err)
+			return
+		}
+
+		fmt.Printf("请完善 %s 配置文件，", cfg.Filename)
+		pause()
+		return
+	}
+
+	err := api.Initial(cfg)
+	if err != nil {
+		log(err)
+		return
+	}
+
+	logger.Out = io.MultiWriter(os.Stderr, logger.Out)
+
+	r := &Registrar{UID: cfg.Role.Owner}
+	r.Password, _ = api.LoadOrStore(cfg.Extra, "password", "")
+	if r.UID == "" || r.Password == "" {
+		log(ErrMissing)
+		return
+	}
+	registrar.SetRegistrar(r)
+
+	engine := gin.New()
+	api.API.Bind(engine)
+
+	err = webhook.Run(cfg.Server.Addr(), engine)
+	if err != nil {
+		log(err)
 	}
 }

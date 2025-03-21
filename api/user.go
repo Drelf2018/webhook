@@ -5,31 +5,69 @@ import (
 	"fmt"
 
 	"github.com/Drelf2018/webhook/model"
+	"github.com/Drelf2018/webhook/utils"
 	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
 )
 
-// 开启自动下载会极大的占用带宽 建议发送完所有 hook 请求后再下载
-var AutoDownload bool
-
 // 下载资源
-func DownloadAssets(blog *model.Blog) {
+func DownloadAssets(blog *model.Blog) error {
 	if blog == nil {
-		return
+		return nil
 	}
+	errs := make(utils.JoinError, 0)
 	if blog.Avatar != "" {
-		downloader.Download(blog.Avatar)
+		_, err := downloader.Download(blog.Avatar)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 	for _, url := range blog.Assets {
-		downloader.Download(url)
+		_, err := downloader.Download(url)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 	for _, url := range blog.Banner {
-		downloader.Download(url)
+		_, err := downloader.Download(url)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 	if blog.Reply != nil {
-		go DownloadAssets(blog.Reply)
+		err := DownloadAssets(blog.Reply)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
+	if len(errs) == 0 {
+		return nil
+	}
+	return errs
+}
+
+// 关注中博文查询
+func GetFollowing(ctx *gin.Context) (any, error) {
+	f := Filter{
+		Reply:    true,
+		Comments: true,
+		Order:    "time desc",
+	}
+	err := ctx.ShouldBindQuery(&f)
+	if err != nil {
+		return 1, err
+	}
+	err = UserDB.Where("task_id in (?)", UserDB.Model(&model.Task{}).Distinct("id").Where("user_id = ?", GetUID(ctx))).Find(&f.Filters).Error
+	if err != nil {
+		return 2, err
+	}
+	var blogs []model.Blog
+	err = FindBlogs(f, &blogs)
+	if err != nil {
+		return 3, err
+	}
+	return blogs, nil
 }
 
 // 提交博文
@@ -63,14 +101,20 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 4, fmt.Errorf("webhook/api: %s: %v", blog, err)
 	}
-	go func() {
+	go func(c *gin.Context) {
 		if len(tasks) != 0 {
-			UserDB.Create(model.NewTemplate(blog).RunTasks(tasks))
+			err := UserDB.Create(model.NewTemplate(blog).RunTasks(tasks)).Error
+			if err != nil {
+				Error(c, err)
+			}
 		}
 		if AutoDownload {
-			DownloadAssets(blog)
+			err := DownloadAssets(blog)
+			if err != nil {
+				Error(c, err)
+			}
 		}
-	}()
+	}(ctx.Copy())
 	return blog.ID, nil
 }
 

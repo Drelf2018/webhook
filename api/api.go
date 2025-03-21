@@ -6,12 +6,11 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	group "github.com/Drelf2018/gin-group"
-	"github.com/Drelf2018/webhook"
-	"github.com/Drelf2018/webhook/file"
+	"github.com/Drelf2018/initial"
 	"github.com/Drelf2018/webhook/model"
-	"github.com/Drelf2018/webhook/registrar"
 	"github.com/Drelf2018/webhook/utils"
 	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/gin-gonic/gin"
@@ -20,13 +19,50 @@ import (
 	"gorm.io/gorm"
 )
 
-var downloader *file.Downloader
+var downloader *utils.Downloader
+
+// 请求转发 https://blog.csdn.net/qq_29799655/article/details/113841064
+func ForwardURL(ctx *gin.Context) {
+	// 复刻请求
+	req := ctx.Request.Clone(context.Background())
+	url := strings.Replace(req.URL.Path, "/forward/", "", 1)
+	req.URL.Scheme, url, _ = strings.Cut(url, "/")
+	req.URL.Host, url, _ = strings.Cut(url, "/")
+	req.URL.Path = "/" + url
+	req.Host = req.URL.Host
+	req.RemoteAddr = ""
+	req.RequestURI = ""
+	// 发送新请求
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, group.Response{Code: 1, Error: err.Error()})
+		return
+	}
+	// 写入状态码和 Header
+	ctx.Status(resp.StatusCode)
+	header := ctx.Writer.Header()
+	for k, vs := range resp.Header {
+		for _, v := range vs {
+			header.Add(k, v)
+		}
+	}
+	// 将 Body 写入原请求中
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		ctx.JSON(http.StatusOK, group.Response{Code: 2, Error: err.Error()})
+		return
+	}
+	ctx.Writer.Write(b)
+}
 
 var vistor = group.G{
 	Middleware: LogMiddleware,
 	CustomFunc: func(r gin.IRouter) {
-		// 下载文件的处理函数
-		downloader = file.NewDownloader(config.Path.Full.Public)
+		// 请求转发
+		r.Any("/forward/*url", ForwardURL)
+
+		// 下载文件
+		downloader = utils.NewDownloader(config.Path.Full.Public)
 		fileServer := http.StripPrefix("/public", http.FileServer(downloader))
 		publicHandler := func(c *gin.Context) {
 			if c.Request.URL.RawQuery != "" {
@@ -37,40 +73,6 @@ var vistor = group.G{
 		}
 		r.GET("/public/*filepath", publicHandler)
 		r.HEAD("/public/*filepath", publicHandler)
-
-		// 请求转发的处理函数 https://blog.csdn.net/qq_29799655/article/details/113841064
-		r.Any("/forward/*url", func(ctx *gin.Context) {
-			// 复刻请求
-			req := ctx.Request.Clone(context.Background())
-			url := strings.Replace(req.URL.Path, "/forward/", "", 1)
-			req.URL.Scheme, url, _ = strings.Cut(url, "/")
-			req.URL.Host, url, _ = strings.Cut(url, "/")
-			req.URL.Path = "/" + url
-			req.Host = req.URL.Host
-			req.RemoteAddr = ""
-			req.RequestURI = ""
-			// 发送新请求
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				ctx.JSON(http.StatusOK, group.Response{Code: 1, Error: err.Error()})
-				return
-			}
-			// 写入状态码和 Header
-			ctx.Status(resp.StatusCode)
-			header := ctx.Writer.Header()
-			for k, vs := range resp.Header {
-				for _, v := range vs {
-					header.Add(k, v)
-				}
-			}
-			// 将 Body 写入原请求中
-			b, err := io.ReadAll(resp.Body)
-			if err != nil {
-				ctx.JSON(http.StatusOK, group.Response{Code: 2, Error: err.Error()})
-				return
-			}
-			ctx.Writer.Write(b)
-		})
 	},
 	Handlers: []group.H{
 		GetVersion,
@@ -78,7 +80,6 @@ var vistor = group.G{
 		PostRegister,
 		GetToken,
 		GetUUID,
-		GetRssID,
 		PostFilter,
 		GetBlogs,
 		GetBlogID,
@@ -89,6 +90,7 @@ var user = group.G{
 	Path:       "user",
 	Middleware: IsUser,
 	Handlers: []group.H{
+		GetFollowing,
 		PostBlog,
 		PostTask,
 		GetTaskID,
@@ -119,70 +121,32 @@ var owner = group.G{
 	},
 }
 
-var api = group.G{
+var API = group.G{
 	Middlewares: []gin.HandlerFunc{group.CORS, Index},
 	Handlers:    []group.H{GetValid, GetPing},
 	Groups:      []group.G{vistor, user, admin, owner},
 }
 
-var config *webhook.Config
-
-type OpenAPI struct {
-	*gin.Engine
-}
-
-func (o *OpenAPI) Initial(cfg *webhook.Config) error {
-	if o == nil || o.Engine == nil {
-		return ErrOpenAPINotExist
+func Initial(cfg *Config) error {
+	if cfg == nil {
+		cfg = &Config{Filename: "config.toml"}
 	}
-	config = cfg
-
-	if BaseURL == "" {
-		baseURL, ok := cfg.Extra["base_url"]
-		if ok {
-			BaseURL, _ = baseURL.(string)
-		} else {
-			cfg.Extra["base_url"] = ""
-		}
+	if cfg.Role.Admin == nil {
+		cfg.Role.Admin = make([]string, 0)
+	}
+	if cfg.Extra == nil {
+		cfg.Extra = make(map[string]any)
 	}
 
-	if !AutoDownload {
-		autoDownload, ok := cfg.Extra["auto_download"]
-		if ok {
-			AutoDownload, _ = autoDownload.(bool)
-		} else {
-			cfg.Extra["auto_download"] = false
-		}
+	err := cfg.Import()
+	if err != nil {
+		return err
+	}
+	err = initial.Initial(cfg)
+	if err != nil {
+		return err
 	}
 
-	if JWTSecretKey == nil {
-		jwt, ok := cfg.Extra["jwt_secret_key"]
-		if ok {
-			s, _ := jwt.(string)
-			JWTSecretKey = []byte(s)
-		} else {
-			JWTSecretKey = []byte("my_secret_key")
-			cfg.Extra["jwt_secret_key"] = string(JWTSecretKey)
-		}
-	}
-
-	if Log == nil {
-		hook := &utils.DateHook{Format: filepath.Join(config.Path.Full.Logs, "2006-01-02.log")}
-		Log = &logrus.Logger{
-			Out:   hook,
-			Hooks: make(logrus.LevelHooks),
-			Formatter: &nested.Formatter{
-				HideKeys:        true,
-				NoColors:        true,
-				TimestampFormat: "15:04:05",
-				ShowFullLevel:   true,
-			},
-			Level: logrus.DebugLevel,
-		}
-		Log.AddHook(hook)
-	}
-
-	var err error
 	if UserDB == nil {
 		UserDB, err = gorm.Open(sqlite.Open(cfg.Path.Full.UserDB))
 		if err != nil {
@@ -221,16 +185,49 @@ func (o *OpenAPI) Initial(cfg *webhook.Config) error {
 		return err
 	}
 
-	err = registrar.Initial(cfg)
-	if err != nil {
-		return err
-	}
-
 	err = cfg.Export()
 	if err != nil {
 		return err
 	}
 
-	api.Bind(o)
+	switch cfg.Server.Mode {
+	case gin.ReleaseMode, gin.DebugMode, gin.TestMode:
+		gin.SetMode(cfg.Server.Mode)
+	}
+
+	if logger == nil {
+		hook := &utils.DateHook{Format: filepath.Join(cfg.Path.Full.Logs, "2006-01-02.log")}
+		logger = &logrus.Logger{
+			Out:   hook,
+			Hooks: make(logrus.LevelHooks),
+			Formatter: &nested.Formatter{
+				HideKeys:        true,
+				NoColors:        true,
+				TimestampFormat: "15:04:05",
+				ShowFullLevel:   true,
+			},
+			Level: logrus.DebugLevel,
+		}
+		logger.AddHook(hook)
+	}
+
+	if AutoSave {
+		stop = time.AfterFunc(utils.NextTimeDuration(4, 0, 0), func() {
+			cfg.Path.CopyBlogDB()
+			ticker := time.NewTicker(24 * time.Hour)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-running.Done():
+					return
+				case <-ticker.C:
+					go cfg.Path.CopyBlogDB()
+				}
+			}
+		}).Stop
+	}
+
+	config = cfg
+
 	return nil
 }

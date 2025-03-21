@@ -1,7 +1,6 @@
 package registrar
 
 import (
-	"github.com/Drelf2018/webhook"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,13 +12,6 @@ func SetRegistrar(reg Registrar) {
 
 func SetRegistrarFunc(fn RegistrarFunc) {
 	registrar = fn
-}
-
-func Initial(cfg *webhook.Config) error {
-	if registrar == nil {
-		return ErrNoRegistrar
-	}
-	return registrar.Initial(cfg)
 }
 
 func Register(ctx *gin.Context) (user any, data any, err error) {

@@ -12,18 +12,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const Version = "v0.18.3"
+const Version = "v0.18.4"
 
 var version = struct {
-	Api string    `json:"api"`
-	Env string    `json:"env"`
-	Run time.Time `json:"run"`
-	Idx []string  `json:"idx"`
+	Api   string    `json:"api"`
+	Env   string    `json:"env"`
+	Start time.Time `json:"start"`
+	Index []string  `json:"index"`
 }{
-	Version,
-	fmt.Sprintf("%s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH),
-	time.Now(),
-	[]string{},
+	Api: Version,
+	Env: fmt.Sprintf("%s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+}
+
+func init() {
+	time.Local, _ = time.LoadLocation("Asia/Shanghai")
+	version.Start = time.Now()
 }
 
 // 当前版本号
@@ -37,7 +40,7 @@ func GetValid(ctx *gin.Context) (any, error) {
 	return err == nil, nil
 }
 
-var onlineUsers sync.Map //map[string]time.Time
+var onlineUsers sync.Map // map[string]time.Time
 
 // 更新在线时间
 func GetPing(ctx *gin.Context) (any, error) {
@@ -147,12 +150,12 @@ func GetUUID(ctx *gin.Context) (any, error) {
 
 type Filter struct {
 	Filters  []model.Filter `json:"filters"`
-	Reply    bool           `json:"reply"`
-	Comments bool           `json:"comments"`
-	Order    string         `json:"order"`
-	Limit    int            `json:"limit"`
-	Offset   int            `json:"offset"`
-	Conds    []string       `json:"conds"`
+	Reply    bool           `json:"reply"    form:"reply"`
+	Comments bool           `json:"comments" form:"comments"`
+	Order    string         `json:"order"    form:"order"`
+	Limit    int            `json:"limit"    form:"limit"`
+	Offset   int            `json:"offset"   form:"offset"`
+	Conds    []string       `json:"conds"    form:"conds"`
 }
 
 func FindBlogs(f Filter, dest any) error {
@@ -179,6 +182,7 @@ func FindBlogs(f Filter, dest any) error {
 	}
 	filter := BlogDB.Model(&model.Blog{})
 	for _, f := range f.Filters {
+		f.TaskID = 0
 		filter = filter.Or(f)
 	}
 	return tx.Where(filter).Find(dest, utils.StrToAny(f.Conds)...).Error

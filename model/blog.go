@@ -10,8 +10,8 @@ import (
 
 // 博文
 type Blog struct {
-	ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"` // 数据库内序号
+	CreatedAt time.Time `json:"created_at"`                         // 数据库内创建时间
 
 	Submitter string `json:"submitter" gorm:"index:idx_blogs_query,priority:2"`      // 提交者
 	Platform  string `json:"platform" gorm:"index:idx_blogs_query,priority:5"`       // 发布平台
@@ -28,8 +28,8 @@ type Blog struct {
 
 	Name        string `json:"name"`        // 账户昵称
 	Avatar      string `json:"avatar"`      // 头像网址
-	Follower    string `json:"follower"`    // 粉丝数
-	Following   string `json:"following"`   // 关注数
+	Follower    string `json:"follower"`    // 粉丝数量
+	Following   string `json:"following"`   // 关注数量
 	Description string `json:"description"` // 个人简介
 
 	ReplyID   *uint64 `json:"reply_id"`                             // 被本文回复的博文序号

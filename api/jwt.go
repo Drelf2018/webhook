@@ -9,8 +9,6 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-var JWTSecretKey []byte
-
 func JWTSecretKeyFn(*jwt.Token) (any, error) {
 	return JWTSecretKey, nil
 }
