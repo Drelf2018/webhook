@@ -158,6 +158,7 @@ type Filter struct {
 	Conds    []string       `json:"conds"    form:"conds"`
 }
 
+// 条件查询博文
 func FindBlogs(f Filter, dest any) error {
 	tx := BlogDB
 	if f.Reply {
@@ -199,6 +200,34 @@ func PostFilter(ctx *gin.Context) (any, error) {
 	err = FindBlogs(f, &blogs)
 	if err != nil {
 		return 2, err
+	}
+	return blogs, nil
+}
+
+// 任务驱动博文查询
+func GetTasks(ctx *gin.Context) (any, error) {
+	var f struct {
+		Filter
+		ID []uint64 `json:"id" form:"id"`
+	}
+	f.Filter = Filter{
+		Reply:    true,
+		Comments: true,
+		Order:    "time desc",
+	}
+	err := ctx.ShouldBindQuery(&f)
+	if err != nil {
+		return 1, err
+	}
+	uid, _ := JWTAuth(ctx)
+	err = UserDB.Find(&f.Filters, "task_id in (?)", UserDB.Model(&model.Task{}).Distinct("id").Where("(public OR user_id = ?) AND id in ?", uid, f.ID)).Error
+	if err != nil {
+		return 2, err
+	}
+	var blogs []model.Blog
+	err = FindBlogs(f.Filter, &blogs)
+	if err != nil {
+		return 3, err
 	}
 	return blogs, nil
 }

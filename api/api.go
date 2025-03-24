@@ -81,6 +81,7 @@ var vistor = group.G{
 		GetToken,
 		GetUUID,
 		PostFilter,
+		GetTasks,
 		GetBlogs,
 		GetBlogID,
 	},
