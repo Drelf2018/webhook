@@ -58,7 +58,7 @@ func GetFollowing(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 1, err
 	}
-	err = UserDB.Where("task_id in (?)", UserDB.Model(&model.Task{}).Distinct("id").Where("user_id = ?", GetUID(ctx))).Find(&f.Filters).Error
+	err = UserDB.Find(&f.Filters, "task_id in (?)", UserDB.Model(&model.Task{}).Distinct("id").Where("user_id = ?", GetUID(ctx))).Error
 	if err != nil {
 		return 2, err
 	}

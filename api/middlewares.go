@@ -21,7 +21,7 @@ func IsUser(ctx *gin.Context) {
 }
 
 func GetUID(ctx *gin.Context) string {
-	return ctx.MustGet(MagicUIDKey).(string)
+	return ctx.GetString(MagicUIDKey)
 }
 
 func IsAdmin(ctx *gin.Context) {

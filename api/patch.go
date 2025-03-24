@@ -239,7 +239,7 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 			return 5, err
 		}
 	}
-	err = UserDB.Debug().Save(task).Error
+	err = UserDB.Save(task).Error
 	if err != nil {
 		return 6, err
 	}
