@@ -191,7 +191,11 @@ func FindBlogs(f Filter, dest any) error {
 
 // 筛选查询
 func PostFilter(ctx *gin.Context) (any, error) {
-	var f Filter
+	f := Filter{
+		Reply:    true,
+		Comments: true,
+		Order:    "time desc",
+	}
 	err := ctx.ShouldBindJSON(&f)
 	if err != nil {
 		return 1, err
@@ -234,7 +238,7 @@ func GetTasks(ctx *gin.Context) (any, error) {
 
 // 查询博文
 func GetBlogs(ctx *gin.Context) (any, error) {
-	var q struct {
+	q := struct {
 		Submitter string   `form:"submitter"`
 		Platform  string   `form:"platform"`
 		Type      string   `form:"type"`
@@ -246,6 +250,10 @@ func GetBlogs(ctx *gin.Context) (any, error) {
 		Limit     int      `form:"limit" gorm:"-"`
 		Offset    int      `form:"offset" gorm:"-"`
 		Conds     []string `form:"conds" gorm:"-"`
+	}{
+		Reply:    true,
+		Comments: true,
+		Order:    "time desc",
 	}
 	err := ctx.ShouldBindQuery(&q)
 	if err != nil {
