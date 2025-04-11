@@ -22,7 +22,7 @@ import (
 var downloader *utils.Downloader
 
 // 请求转发 https://blog.csdn.net/qq_29799655/article/details/113841064
-func ForwardURL(ctx *gin.Context) {
+func AnyForwardURL(ctx *gin.Context) (any, error) {
 	// 复刻请求
 	req := ctx.Request.Clone(context.Background())
 	url := strings.Replace(req.URL.Path, "/forward/", "", 1)
@@ -35,8 +35,7 @@ func ForwardURL(ctx *gin.Context) {
 	// 发送新请求
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		ctx.JSON(http.StatusOK, group.Response{Code: 1, Error: err.Error()})
-		return
+		return 1, err
 	}
 	// 写入状态码和 Header
 	ctx.Status(resp.StatusCode)
@@ -46,21 +45,17 @@ func ForwardURL(ctx *gin.Context) {
 			header.Add(k, v)
 		}
 	}
-	// 将 Body 写入原请求中
-	b, err := io.ReadAll(resp.Body)
+	// 将 Body 写回原请求中
+	_, err = io.Copy(ctx.Writer, resp.Body)
 	if err != nil {
-		ctx.JSON(http.StatusOK, group.Response{Code: 2, Error: err.Error()})
-		return
+		return 2, err
 	}
-	ctx.Writer.Write(b)
+	return nil, nil
 }
 
-var vistor = group.G{
-	Middleware: LogMiddleware,
+var vistor = group.Group{
+	Middlewares: group.M{LogMiddleware},
 	CustomFunc: func(r gin.IRouter) {
-		// 请求转发
-		r.Any("/forward/*url", ForwardURL)
-
 		// 下载文件
 		downloader = utils.NewDownloader(config.Path.Full.Public)
 		fileServer := http.StripPrefix("/public", http.FileServer(downloader))
@@ -74,7 +69,7 @@ var vistor = group.G{
 		r.GET("/public/*filepath", publicHandler)
 		r.HEAD("/public/*filepath", publicHandler)
 	},
-	Handlers: []group.H{
+	Handlers: group.H{
 		GetVersion,
 		GetOnline,
 		PostRegister,
@@ -85,12 +80,15 @@ var vistor = group.G{
 		GetBlogs,
 		GetBlogID,
 	},
+	HandlerMap: map[string]group.HandlerFunc{
+		"/forward/*url": AnyForwardURL,
+	},
 }
 
-var user = group.G{
-	Path:       "user",
-	Middleware: IsUser,
-	Handlers: []group.H{
+var user = group.Group{
+	Path:        "user",
+	Middlewares: group.M{IsUser},
+	Handlers: group.H{
 		GetFollowing,
 		PostBlog,
 		PostTask,
@@ -98,23 +96,25 @@ var user = group.G{
 		PatchTaskID,
 		DeleteTaskID,
 		Get,
-		group.Wrapper(http.MethodPatch, "/:uid", PatchUser),
 		PostTest,
 		PostTests,
 	},
+	HandlerMap: map[string]group.HandlerFunc{
+		"/:uid": PatchUser,
+	},
 }
 
-var admin = group.G{
-	Path:       "admin",
-	Middleware: IsAdmin,
-	CustomFunc: func(r gin.IRouter) { r.StaticFS("/logs", http.Dir(config.Path.Full.Logs)) },
+var admin = group.Group{
+	Path:        "admin",
+	Middlewares: group.M{IsAdmin},
+	CustomFunc:  func(r gin.IRouter) { r.StaticFS("/logs", http.Dir(config.Path.Full.Logs)) },
 }
 
-var owner = group.G{
-	Path:       "owner",
-	Middleware: IsOwner,
-	CustomFunc: func(r gin.IRouter) { r.StaticFS("/root", http.Dir(config.Path.Full.Root)) },
-	Handlers: []group.H{
+var owner = group.Group{
+	Path:        "owner",
+	Middlewares: group.M{IsOwner},
+	CustomFunc:  func(r gin.IRouter) { r.StaticFS("/root", http.Dir(config.Path.Full.Root)) },
+	Handlers: group.H{
 		GetExecute,
 		GetShutdown,
 		GetUserUID,
@@ -122,10 +122,10 @@ var owner = group.G{
 	},
 }
 
-var API = group.G{
-	Middlewares: []gin.HandlerFunc{group.CORS, Index},
-	Handlers:    []group.H{GetValid, GetPing},
-	Groups:      []group.G{vistor, user, admin, owner},
+var API = group.Group{
+	Middlewares: group.M{group.CORS, Index},
+	Handlers:    group.H{GetValid, GetPing},
+	Groups:      group.G{vistor, user, admin, owner},
 }
 
 func Initial(cfg *Config) error {
