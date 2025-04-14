@@ -61,20 +61,20 @@ func (d *Downloader) Open(name string) (http.File, error) {
 		return nil, ErrInvalidURL
 	}
 	// 解析网址
-	url := fmt.Sprintf("%s://%s", protocol, path)
-	u, err := urlpkg.Parse(url)
+	u, err := urlpkg.Parse(fmt.Sprintf("%s://%s", protocol, path))
 	if err != nil {
 		return nil, err
 	}
 	if u.Hostname() == "" {
 		return nil, ErrInvalidURL
 	}
-	// 创建资源文件夹
+	// 拼接资源文件夹
 	fullpath := filepath.Join(d.Root, u.Hostname(), u.Port(), u.Path)
-	_, err = os.Stat(fullpath)
-	if err == nil {
+	// 判断是否重新下载
+	if _, err = os.Stat(fullpath); err == nil {
 		return os.Open(fullpath)
 	}
+	// 创建前置文件夹
 	err = os.MkdirAll(filepath.Dir(fullpath), os.ModePerm)
 	if err != nil {
 		return nil, err
@@ -89,9 +89,9 @@ func (d *Downloader) Open(name string) (http.File, error) {
 	// 获取资源
 	var resp *http.Response
 	if client != nil {
-		resp, err = client.Get(url)
+		resp, err = client.Get(u.String())
 	} else {
-		resp, err = http.Get(url)
+		resp, err = http.Get(u.String())
 	}
 	if err != nil {
 		return nil, err
