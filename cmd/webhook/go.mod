@@ -13,7 +13,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/Drelf2018/gin-group v0.0.0-20241111172429-126f4cba8c81 // indirect
+	github.com/Drelf2018/gin-group v0.0.0-20250414043619-cbf673d8a76b // indirect
 	github.com/antonfisher/nested-logrus-formatter v1.3.1 // indirect
 	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect

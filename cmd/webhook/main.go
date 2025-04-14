@@ -105,7 +105,7 @@ func main() {
 	registrar.SetRegistrar(r)
 
 	engine := gin.New()
-	api.API.Bind(engine)
+	api.Backend.Bind(engine)
 
 	err = webhook.Run(cfg.Server.Addr(), engine)
 	if err != nil {
