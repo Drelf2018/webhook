@@ -10,32 +10,32 @@ import (
 
 const MagicUIDKey string = "_magic_uid_key_"
 
+func GetUID(ctx *gin.Context) string {
+	return ctx.GetString(MagicUIDKey)
+}
+
 func IsUser(ctx *gin.Context) {
 	uid, err := JWTAuth(ctx)
 	if err != nil {
-		ctx.Error(err)
+		Error(ctx, err)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -1, Error: err.Error()})
 	} else {
 		ctx.Set(MagicUIDKey, uid)
 	}
 }
 
-func GetUID(ctx *gin.Context) string {
-	return ctx.GetString(MagicUIDKey)
-}
-
 func IsAdmin(ctx *gin.Context) {
 	uid, err := JWTAuth(ctx)
 	if err != nil {
-		ctx.Error(err)
+		Error(ctx, err)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -1, Error: err.Error()})
 	}
 	user := &model.User{UID: uid}
 	if err = UserDB.First(user).Error; err != nil {
-		ctx.Error(err)
+		Error(ctx, err)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -2, Error: err.Error()})
 	} else if !user.Role.IsAdmin() {
-		ctx.Error(ErrPermDenied)
+		Error(ctx, ErrPermDenied)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -3, Error: ErrPermDenied.Error()})
 	}
 }
@@ -43,10 +43,10 @@ func IsAdmin(ctx *gin.Context) {
 func IsOwner(ctx *gin.Context) {
 	uid, err := JWTAuth(ctx)
 	if err != nil {
-		ctx.Error(err)
+		Error(ctx, err)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -1, Error: err.Error()})
 	} else if uid != config.Role.Owner {
-		ctx.Error(ErrPermDenied)
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -2, Error: ErrPermDenied.Error()})
+		Error(ctx, ErrPermDenied)
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, group.Response{Code: -3, Error: ErrPermDenied.Error()})
 	}
 }

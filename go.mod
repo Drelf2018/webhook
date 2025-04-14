@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/BurntSushi/toml v1.4.0
-	github.com/Drelf2018/gin-group v0.0.0-20250411022242-83daa5d61e02
+	github.com/Drelf2018/gin-group v0.0.0-20250414043619-cbf673d8a76b
 	github.com/Drelf2018/initial v0.9.0
 	github.com/antonfisher/nested-logrus-formatter v1.3.1
 	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394

@@ -19,6 +19,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// 下载器
 var downloader *utils.Downloader
 
 // 请求转发 https://blog.csdn.net/qq_29799655/article/details/113841064
@@ -54,20 +55,9 @@ func AnyForwardURL(ctx *gin.Context) (any, error) {
 }
 
 var vistor = group.Group{
-	Middlewares: group.M{LogMiddleware},
 	CustomFunc: func(r gin.IRouter) {
-		// 下载文件
 		downloader = utils.NewDownloader(config.Path.Full.Public)
-		fileServer := http.StripPrefix("/public", http.FileServer(downloader))
-		publicHandler := func(c *gin.Context) {
-			if c.Request.URL.RawQuery != "" {
-				c.Request.URL.Path = c.Request.URL.Path + "?" + c.Request.URL.RawQuery
-				c.Request.URL.RawQuery = ""
-			}
-			fileServer.ServeHTTP(c.Writer, c.Request)
-		}
-		r.GET("/public/*filepath", publicHandler)
-		r.HEAD("/public/*filepath", publicHandler)
+		r.StaticFS("/public", downloader)
 	},
 	Handlers: group.H{
 		GetVersion,
@@ -86,7 +76,6 @@ var vistor = group.Group{
 }
 
 var user = group.Group{
-	Path:        "user",
 	Middlewares: group.M{IsUser},
 	Handlers: group.H{
 		GetFollowing,
@@ -98,20 +87,16 @@ var user = group.Group{
 		Get,
 		PostTest,
 		PostTests,
-	},
-	HandlerMap: map[string]group.HandlerFunc{
-		"/:uid": PatchUser,
+		PatchUserUID,
 	},
 }
 
 var admin = group.Group{
-	Path:        "admin",
 	Middlewares: group.M{IsAdmin},
 	CustomFunc:  func(r gin.IRouter) { r.StaticFS("/logs", http.Dir(config.Path.Full.Logs)) },
 }
 
 var owner = group.Group{
-	Path:        "owner",
 	Middlewares: group.M{IsOwner},
 	CustomFunc:  func(r gin.IRouter) { r.StaticFS("/root", http.Dir(config.Path.Full.Root)) },
 	Handlers: group.H{
@@ -122,10 +107,16 @@ var owner = group.Group{
 	},
 }
 
-var API = group.Group{
+var api = group.Group{
+	Path:      "api",
+	Handlers:  group.H{GetValid, GetPing},
+	Groups:    group.G{vistor, user, admin, owner},
+	Convertor: group.Convertor,
+}
+
+var Backend = group.Group{
 	Middlewares: group.M{group.CORS, Index},
-	Handlers:    group.H{GetValid, GetPing},
-	Groups:      group.G{vistor, user, admin, owner},
+	Groups:      group.G{api},
 }
 
 func Initial(cfg *Config) error {

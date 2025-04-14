@@ -38,7 +38,7 @@ func createError(errs []group.Response) error {
 }
 
 // 修改用户信息
-func PatchUser(ctx *gin.Context) (any, error) {
+func PatchUserUID(ctx *gin.Context) (any, error) {
 	var body []PatchBody
 	err := ctx.ShouldBindJSON(&body)
 	if err != nil {
