@@ -29,14 +29,14 @@ func init() {
 	version.Start = time.Now()
 }
 
-// 当前版本号
 const Success string = "success"
 
+// 当前版本信息
 func GetVersion(ctx *gin.Context) (any, error) {
 	return version, nil
 }
 
-// 检验鉴权码是否有效
+// 校验鉴权码
 func GetValid(ctx *gin.Context) (any, error) {
 	_, err := JWTAuth(ctx)
 	return err == nil, nil
@@ -66,7 +66,7 @@ func GetOnline(ctx *gin.Context) (any, error) {
 	return m, nil
 }
 
-// 新建用户
+// 注册账户
 func PostRegister(ctx *gin.Context) (any, error) {
 	u, data, err := registrar.Register(ctx)
 	if u == nil {
@@ -79,7 +79,7 @@ func PostRegister(ctx *gin.Context) (any, error) {
 	if tx.RowsAffected != 0 {
 		return 2, ErrUserRegistered
 	}
-	// create user
+	// 新建用户
 	user := u.(*model.User)
 	if user.UID == config.Role.Owner {
 		user.Role = model.Owner
@@ -96,7 +96,7 @@ func PostRegister(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 3, err
 	}
-	return "success", nil
+	return Success, nil
 }
 
 // 获取 Token
