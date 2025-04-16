@@ -54,7 +54,7 @@ func AnyForwardURL(ctx *gin.Context) (any, error) {
 	return nil, nil
 }
 
-var vistor = group.Group{
+var visitor = group.Group{
 	CustomFunc: func(r gin.IRouter) {
 		downloader = utils.NewDownloader(config.Path.Full.Public)
 		r.StaticFS("/public", downloader)
@@ -110,7 +110,7 @@ var owner = group.Group{
 var api = group.Group{
 	Path:      "api",
 	Handlers:  group.H{GetValid, GetPing},
-	Groups:    group.G{vistor, user, admin, owner},
+	Groups:    group.G{visitor, user, admin, owner},
 	Convertor: group.Convertor,
 }
 
