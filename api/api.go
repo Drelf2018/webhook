@@ -55,10 +55,6 @@ func AnyForwardURL(ctx *gin.Context) (any, error) {
 }
 
 var visitor = group.Group{
-	CustomFunc: func(r gin.IRouter) {
-		downloader = utils.NewDownloader(config.Path.Full.Public)
-		r.StaticFS("/public", downloader)
-	},
 	Handlers: group.H{
 		GetVersion,
 		GetOnline,
@@ -69,9 +65,6 @@ var visitor = group.Group{
 		GetTasks,
 		GetBlogs,
 		GetBlogID,
-	},
-	HandlerMap: map[string]group.HandlerFunc{
-		"/forward/*url": AnyForwardURL,
 	},
 }
 
@@ -115,7 +108,14 @@ var api = group.Group{
 
 var Backend = group.Group{
 	Middlewares: group.M{group.CORS, Index},
-	Groups:      group.G{api},
+	CustomFunc: func(r gin.IRouter) {
+		downloader = utils.NewDownloader(config.Path.Full.Public)
+		r.StaticFS("/public", downloader)
+	},
+	HandlerMap: map[string]group.HandlerFunc{
+		"/forward/*url": AnyForwardURL,
+	},
+	Groups: group.G{api},
 }
 
 func Initial(cfg *Config) error {
