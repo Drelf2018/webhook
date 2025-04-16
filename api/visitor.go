@@ -138,9 +138,14 @@ func GetToken(ctx *gin.Context) (data any, err error) {
 }
 
 // 获取用户信息
-func GetUUID(ctx *gin.Context) (any, error) {
+func GetUserUID(ctx *gin.Context) (any, error) {
 	user := &model.User{UID: ctx.Param("uid")}
-	tx := UserDB.Limit(1).Find(user)
+	uid, _ := JWTAuth(ctx)
+	tx := UserDB.Limit(1)
+	if uid == user.UID || uid == config.Role.Owner {
+		tx = tx.Preload("Tasks").Preload("Tasks.Filters")
+	}
+	tx = tx.Find(user)
 	if tx.Error != nil {
 		return 1, tx.Error
 	}

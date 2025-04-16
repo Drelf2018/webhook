@@ -177,7 +177,7 @@ func DeleteTaskID(ctx *gin.Context) (any, error) {
 }
 
 // 获取自身信息
-func Get(ctx *gin.Context) (any, error) {
+func GetUser(ctx *gin.Context) (any, error) {
 	user := &model.User{UID: GetUID(ctx)}
 	err := UserDB.Preload("Tasks").Preload("Tasks.Filters").First(user).Error
 	if err != nil {

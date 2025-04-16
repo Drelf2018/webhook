@@ -64,8 +64,8 @@ var visitor = group.Group{
 		GetOnline,
 		PostRegister,
 		GetToken,
-		GetUUID,
 		PostFilter,
+		GetUserUID,
 		GetTasks,
 		GetBlogs,
 		GetBlogID,
@@ -84,7 +84,7 @@ var user = group.Group{
 		GetTaskID,
 		PatchTaskID,
 		DeleteTaskID,
-		Get,
+		GetUser,
 		PostTest,
 		PostTests,
 		PatchUserUID,
@@ -102,7 +102,6 @@ var owner = group.Group{
 	Handlers: group.H{
 		GetExecute,
 		GetShutdown,
-		GetUserUID,
 		PostUpload,
 	},
 }
