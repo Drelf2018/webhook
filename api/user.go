@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/Drelf2018/webhook/model"
 	"github.com/Drelf2018/webhook/utils"
@@ -154,12 +155,28 @@ func PostTask(ctx *gin.Context) (any, error) {
 // 获取任务
 func GetTaskID(ctx *gin.Context) (any, error) {
 	task := &model.Task{}
-	tx := UserDB.Preload("Filters").Preload("Logs").Limit(1).Find(task, "id = ? AND (public OR user_id = ?)", ctx.Param("id"), GetUID(ctx))
+	tx := UserDB.Preload("Filters").Limit(1).Find(task, "id = ?", ctx.Param("id"))
 	if tx.Error != nil {
 		return 1, tx.Error
 	}
 	if tx.RowsAffected == 0 {
 		return 2, ErrTaskNotExist
+	}
+	uid := GetUID(ctx)
+	if !task.Public && task.UserID != uid && uid != config.Role.Owner {
+		return 3, ErrPermDenied
+	}
+	offset, err := strconv.Atoi(ctx.DefaultQuery("offset", "0"))
+	if err != nil {
+		return 4, err
+	}
+	limit, err := strconv.Atoi(ctx.DefaultQuery("limit", "100"))
+	if err != nil {
+		return 5, err
+	}
+	err = UserDB.Debug().Order("created_at desc").Offset(offset).Limit(limit).Find(&task.Logs, "task_id = ?", task.ID).Error
+	if err != nil {
+		return 6, err
 	}
 	return task, nil
 }
