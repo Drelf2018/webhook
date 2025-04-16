@@ -1,10 +1,8 @@
 package api
 
 import (
-	"strings"
 	"sync"
 
-	"github.com/Drelf2018/webhook/model"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 )
@@ -71,14 +69,4 @@ func JWTAuth(ctx *gin.Context) (uid string, err error) {
 		return "", err
 	}
 	return user.UID, nil
-}
-
-func JWTUser(ctx *gin.Context) (user *model.User, err error) {
-	uid, err := JWTAuth(ctx)
-	if err != nil {
-		return nil, err
-	}
-	user = &model.User{UID: uid}
-	err = UserDB.First(user).Error
-	return
 }
