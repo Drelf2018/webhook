@@ -51,13 +51,15 @@ func (c UserClaims) Token(update bool) (string, error) {
 func JWTAuth(ctx *gin.Context) (uid string, err error) {
 	token := ctx.GetHeader("Authorization")
 	if token == "" {
-		var exists bool
-		token, exists = ctx.GetQuery("auth")
-		if exists {
-			ctx.Request.URL.RawQuery = strings.ReplaceAll(ctx.Request.URL.RawQuery, "auth="+token, "")
+		token, _ = ctx.Cookie("auth")
+	}
+	if token == "" {
+		query := ctx.Request.URL.Query()
+		token = query.Get("auth")
+		if token != "" {
+			query.Del("auth")
+			ctx.Request.URL.RawQuery = query.Encode()
 			ctx.SetCookie("auth", token, 0, "", "", false, false)
-		} else {
-			token, _ = ctx.Cookie("auth")
 		}
 	}
 	if token == "" {
