@@ -49,21 +49,21 @@ func DownloadAssets(blog *model.Blog) error {
 
 // 关注中博文查询
 func GetFollowing(ctx *gin.Context) (any, error) {
-	f := Filter{
+	c := Condition{
 		Reply:    true,
 		Comments: true,
 		Order:    "time desc",
 	}
-	err := ctx.ShouldBindQuery(&f)
+	err := ctx.ShouldBindQuery(&c)
 	if err != nil {
 		return 1, err
 	}
-	err = UserDB.Find(&f.Filters, "task_id in (?)", UserDB.Model(&model.Task{}).Distinct("id").Where("user_id = ?", GetUID(ctx))).Error
+	taskID := UserDB.Model(&model.Task{}).Distinct("id").Where("user_id = ?", GetUID(ctx))
+	err = UserDB.Find(&c.Filters, "task_id IN (?)", taskID).Error
 	if err != nil {
 		return 2, err
 	}
-	var blogs []model.Blog
-	err = FindBlogs(f, &blogs)
+	blogs, err := c.Finds(BlogDB)
 	if err != nil {
 		return 3, err
 	}
@@ -219,7 +219,7 @@ func PostTests(ctx *gin.Context) (any, error) {
 		return 2, ErrBlogNotExist
 	}
 	var tasks []*model.Task
-	err = UserDB.Find(&tasks, "user_id = ? AND id in ?", GetUID(ctx), data.Tasks).Error
+	err = UserDB.Find(&tasks, "user_id = ? AND id IN ?", GetUID(ctx), data.Tasks).Error
 	if err != nil {
 		return 3, err
 	}

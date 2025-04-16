@@ -216,46 +216,48 @@ func (c *Condition) Finds(tx *gorm.DB) (blogs []model.Blog, err error) {
 }
 
 // 筛选查询
-func PostFilter(ctx *gin.Context) (any, error) {
-	f := Filter{
+func PostFilters(ctx *gin.Context) (any, error) {
+	c := Condition{
 		Reply:    true,
 		Comments: true,
 		Order:    "time desc",
 	}
-	err := ctx.ShouldBindJSON(&f)
+	err := ctx.ShouldBindJSON(&c)
 	if err != nil {
 		return 1, err
 	}
-	var blogs []model.Blog
-	err = FindBlogs(f, &blogs)
+	blogs, err := c.Finds(BlogDB)
 	if err != nil {
 		return 2, err
 	}
 	return blogs, nil
 }
 
-// 任务驱动博文查询
+// 任务驱动查询
 func GetTasks(ctx *gin.Context) (any, error) {
-	var f struct {
-		Filter
-		ID []uint64 `json:"id" form:"id"`
+	c := struct {
+		Condition
+		ID []uint64 `form:"id"`
+	}{
+		Condition: Condition{
+			Reply:    true,
+			Comments: true,
+			Order:    "time desc",
+		},
 	}
-	f.Filter = Filter{
-		Reply:    true,
-		Comments: true,
-		Order:    "time desc",
-	}
-	err := ctx.ShouldBindQuery(&f)
+	err := ctx.ShouldBindQuery(&c)
 	if err != nil {
 		return 1, err
 	}
+
 	uid, _ := JWTAuth(ctx)
-	err = UserDB.Find(&f.Filters, "task_id in (?)", UserDB.Model(&model.Task{}).Distinct("id").Where("(public OR user_id = ?) AND id in ?", uid, f.ID)).Error
+	taskID := UserDB.Model(&model.Task{}).Distinct("id").Where("(public OR user_id = ?) AND id IN ?", uid, c.ID)
+	err = UserDB.Find(&c.Filters, "task_id IN (?)", taskID).Error
 	if err != nil {
 		return 2, err
 	}
-	var blogs []model.Blog
-	err = FindBlogs(f.Filter, &blogs)
+
+	blogs, err := c.Finds(BlogDB)
 	if err != nil {
 		return 3, err
 	}
@@ -265,49 +267,22 @@ func GetTasks(ctx *gin.Context) (any, error) {
 // 查询博文
 func GetBlogs(ctx *gin.Context) (any, error) {
 	q := struct {
-		Submitter string   `form:"submitter"`
-		Platform  string   `form:"platform"`
-		Type      string   `form:"type"`
-		UID       string   `form:"uid"`
-		MID       string   `form:"mid" gorm:"column:mid"`
-		Reply     bool     `form:"reply" gorm:"-"`
-		Comments  bool     `form:"comments" gorm:"-"`
-		Order     string   `form:"order" gorm:"-"`
-		Limit     int      `form:"limit" gorm:"-"`
-		Offset    int      `form:"offset" gorm:"-"`
-		Conds     []string `form:"conds" gorm:"-"`
+		Condition
+		model.Filter
+		MID string `form:"mid" gorm:"column:mid"`
 	}{
-		Reply:    true,
-		Comments: true,
-		Order:    "time desc",
+		Condition: Condition{
+			Reply:    true,
+			Comments: true,
+			Order:    "time desc",
+		},
 	}
 	err := ctx.ShouldBindQuery(&q)
 	if err != nil {
 		return 1, err
 	}
-	tx := BlogDB.Where(q)
-	if q.Reply {
-		tx = tx.Preload("Reply")
-	}
-	if q.Comments {
-		tx = tx.Preload("Comments")
-	}
-	if q.Order != "" {
-		tx = tx.Order(q.Order)
-	}
-	switch {
-	case q.Limit >= 100:
-		tx = tx.Limit(100)
-	case q.Limit > 0:
-		tx = tx.Limit(q.Limit)
-	default:
-		tx = tx.Limit(30)
-	}
-	if q.Offset != 0 {
-		tx = tx.Offset(q.Offset)
-	}
-	var blogs []model.Blog
-	err = tx.Find(&blogs, utils.StrToAny(q.Conds)...).Error
+	q.Condition.Filters = []model.Filter{q.Filter}
+	blogs, err := q.Finds(BlogDB)
 	if err != nil {
 		return 2, err
 	}
