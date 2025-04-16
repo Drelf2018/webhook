@@ -1,7 +1,5 @@
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/Drelf2018/gin-group v0.0.0-20250411022242-83daa5d61e02 h1:8xJaNjPTxNklQnTY5CzZUQG+qmvvlIefL2Na7afrP04=
-github.com/Drelf2018/gin-group v0.0.0-20250411022242-83daa5d61e02/go.mod h1:XXGgUvj2aYsL8U6bM6rjy9sC2me5pPkoC7sAx4FNiYs=
 github.com/Drelf2018/gin-group v0.0.0-20250414043619-cbf673d8a76b h1:KjNQau6E51wx2GRwQTMXSTHtJOiKfV0Dp9hwGmAdfBo=
 github.com/Drelf2018/gin-group v0.0.0-20250414043619-cbf673d8a76b/go.mod h1:XXGgUvj2aYsL8U6bM6rjy9sC2me5pPkoC7sAx4FNiYs=
 github.com/Drelf2018/initial v0.9.0 h1:3Hu4kf85EIBoWbDySzRSv6vYUnyfn1eP49bDMChdcYY=
