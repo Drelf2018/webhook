@@ -119,10 +119,8 @@ func (t *Template) RunTask(task *Task) RequestLog {
 	}
 	err = json.Unmarshal(r, &log.Result)
 	if err != nil {
-		log.RawResult = string(r)
+		log.Result = string(r)
 		log.Error = err.Error()
-		log.FinishedAt = time.Now()
-		return log
 	}
 	log.FinishedAt = time.Now()
 	return log

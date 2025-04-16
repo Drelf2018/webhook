@@ -45,6 +45,7 @@ type Task struct {
 	Public bool   `json:"public"`  // 是否公开
 	Enable bool   `json:"enable"`  // 是否启用
 	Name   string `json:"name"`    // 任务名称
+	Icon   string `json:"icon"`    // 任务图标
 	Method string `json:"method"`  // 请求方法
 	URL    string `json:"url"`     // 请求地址
 	Body   string `json:"body"`    // 请求内容
@@ -110,7 +111,6 @@ type RequestLog struct {
 	BlogID     uint64    `json:"blog_id"`
 	CreatedAt  time.Time `json:"created_at"`
 	FinishedAt time.Time `json:"finished_at"`
-	RawResult  string    `json:"raw_result"`                    // 响应纯文本
 	Result     any       `json:"result" gorm:"serializer:json"` // 响应为 JSON 会自动解析
 	Error      string    `json:"error"`                         // 请求过程中发生的错误
 	TaskID     uint64    `json:"-" gorm:"index:idx_logs_query"` // 外键
