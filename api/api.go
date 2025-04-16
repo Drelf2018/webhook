@@ -25,8 +25,8 @@ var downloader *utils.Downloader
 // 请求转发 https://blog.csdn.net/qq_29799655/article/details/113841064
 func AnyForwardURL(ctx *gin.Context) (any, error) {
 	// 复刻请求
+	url := strings.TrimPrefix(ctx.Param("url"), "/")
 	req := ctx.Request.Clone(context.Background())
-	url := strings.Replace(req.URL.Path, "/forward/", "", 1)
 	req.URL.Scheme, url, _ = strings.Cut(url, "/")
 	req.URL.Host, url, _ = strings.Cut(url, "/")
 	req.URL.Path = "/" + url
