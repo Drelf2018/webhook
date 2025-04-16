@@ -46,19 +46,23 @@ func (c UserClaims) Token(update bool) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(key)
 }
 
+// JWT 校验
 func JWTAuth(ctx *gin.Context) (uid string, err error) {
+	// 优先从请求头获取
 	token := ctx.GetHeader("Authorization")
-	if token == "" {
-		token, _ = ctx.Cookie("auth")
-	}
+	// 再从请求参数中获取 用于覆盖 Cookies
 	if token == "" {
 		query := ctx.Request.URL.Query()
 		token = query.Get("auth")
 		if token != "" {
+			// 避免把鉴权码写进日志
 			query.Del("auth")
 			ctx.Request.URL.RawQuery = query.Encode()
-			ctx.SetCookie("auth", token, 0, "", "", false, false)
 		}
+	}
+	// 最后在 Cookies 里找
+	if token == "" {
+		token, _ = ctx.Cookie("auth")
 	}
 	if token == "" {
 		return "", ErrAuthNotExist
@@ -68,5 +72,7 @@ func JWTAuth(ctx *gin.Context) (uid string, err error) {
 	if err != nil {
 		return "", err
 	}
+	// 鉴权成功则写入 Cookies
+	ctx.SetCookie("auth", token, 0, "", "", false, false)
 	return user.UID, nil
 }
