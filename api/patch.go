@@ -91,7 +91,7 @@ func PatchUserUID(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 6, err
 	}
-	return "success", nil
+	return Success, nil
 }
 
 func PatchUserBan(ctx *gin.Context, me, user *model.User, patch PatchBody) error {
@@ -243,5 +243,5 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 6, err
 	}
-	return "success", nil
+	return Success, nil
 }

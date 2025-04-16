@@ -173,7 +173,7 @@ func DeleteTaskID(ctx *gin.Context) (any, error) {
 	if tx.RowsAffected == 0 {
 		return 2, ErrTaskNotExist
 	}
-	return "success", nil
+	return Success, nil
 }
 
 // 获取自身信息

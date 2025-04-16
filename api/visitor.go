@@ -30,6 +30,8 @@ func init() {
 }
 
 // 当前版本号
+const Success string = "success"
+
 func GetVersion(ctx *gin.Context) (any, error) {
 	return version, nil
 }

@@ -71,5 +71,5 @@ func PostUpload(ctx *gin.Context) (any, error) {
 	if len(errs) != 0 {
 		return 2, fmt.Errorf("webhook/api: upload files error: %w", errs)
 	}
-	return "success", nil
+	return Success, nil
 }
