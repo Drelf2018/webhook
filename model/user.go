@@ -86,11 +86,11 @@ func (t *Task) AfterFind(tx *gorm.DB) error {
 //		UID: "514",
 //	}
 type Filter struct {
-	Submitter string `json:"submitter"` // 提交者
-	Platform  string `json:"platform"`  // 发布平台
-	Type      string `json:"type"`      // 博文类型
-	UID       string `json:"uid"`       // 账户序号
-	TaskID    uint64 `json:"-"`         // 外键
+	Submitter string `json:"submitter" form:"submitter"` // 提交者
+	Platform  string `json:"platform" form:"platform"`   // 发布平台
+	Type      string `json:"type" form:"type"`           // 博文类型
+	UID       string `json:"uid" form:"uid"`             // 账户序号
+	TaskID    uint64 `json:"-" form:"-"`                 // 外键
 }
 
 func (f Filter) IsZero() bool {
