@@ -10,6 +10,7 @@ import (
 	"github.com/Drelf2018/webhook/registrar"
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 const Version = "v0.18.4"
@@ -155,45 +156,63 @@ func GetUserUID(ctx *gin.Context) (any, error) {
 	return user, nil
 }
 
-type Filter struct {
-	Filters  []model.Filter `json:"filters"`
-	Reply    bool           `json:"reply"    form:"reply"`
-	Comments bool           `json:"comments" form:"comments"`
-	Order    string         `json:"order"    form:"order"`
-	Limit    int            `json:"limit"    form:"limit"`
-	Offset   int            `json:"offset"   form:"offset"`
-	Conds    []string       `json:"conds"    form:"conds"`
+// 查询条件
+type Condition struct {
+	// 筛选
+	Filters []model.Filter `json:"filters" form:"-"`
+
+	// 是否包含转发
+	Reply bool `json:"reply" form:"reply"`
+
+	// 是否包含评论
+	Comments bool `json:"comments" form:"comments"`
+
+	// 查询排列顺序
+	Order string `json:"order" form:"order"`
+
+	// 查询行数
+	Limit int `json:"limit" form:"limit"`
+
+	// 查询偏移
+	Offset int `json:"offset" form:"offset"`
+
+	// 其他条件
+	Conds []string `json:"conds" form:"conds"`
 }
 
 // 条件查询博文
-func FindBlogs(f Filter, dest any) error {
-	tx := BlogDB
-	if f.Reply {
+func (c *Condition) Find(tx *gorm.DB, dest any) error {
+	if c.Reply {
 		tx = tx.Preload("Reply")
 	}
-	if f.Comments {
+	if c.Comments {
 		tx = tx.Preload("Comments")
 	}
-	if f.Order != "" {
-		tx = tx.Order(f.Order)
+	if c.Order != "" {
+		tx = tx.Order(c.Order)
 	}
 	switch {
-	case f.Limit >= 100:
-		tx = tx.Limit(100)
-	case f.Limit > 0:
-		tx = tx.Limit(f.Limit)
+	case c.Limit > 1000:
+		tx = tx.Limit(1000)
+	case c.Limit > 0:
+		tx = tx.Limit(c.Limit)
 	default:
 		tx = tx.Limit(30)
 	}
-	if f.Offset != 0 {
-		tx = tx.Offset(f.Offset)
+	if c.Offset != 0 {
+		tx = tx.Offset(c.Offset)
 	}
 	filter := BlogDB.Model(&model.Blog{})
-	for _, f := range f.Filters {
+	for _, f := range c.Filters {
 		f.TaskID = 0
 		filter = filter.Or(f)
 	}
-	return tx.Where(filter).Find(dest, utils.StrToAny(f.Conds)...).Error
+	return tx.Where(filter).Find(dest, utils.StrToAny(c.Conds)...).Error
+}
+
+func (c *Condition) Finds(tx *gorm.DB) (blogs []model.Blog, err error) {
+	err = c.Find(tx, &blogs)
+	return
 }
 
 // 筛选查询
