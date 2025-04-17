@@ -7,12 +7,13 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func JWTSecretKeyFn(*jwt.Token) (any, error) {
+var JWTSecretKeyFn = func(*jwt.Token) (any, error) {
 	return JWTSecretKey, nil
 }
 
 var tokenIssuedAt sync.Map // map[string]int64
 
+// 用户声明
 type UserClaims struct {
 	UID      string `json:"uid" gorm:"primaryKey"`
 	IssuedAt int64  `json:"iat"`
@@ -31,17 +32,10 @@ func (c UserClaims) Valid() error {
 	return ErrExpired
 }
 
-func (c UserClaims) Token(update bool) (string, error) {
+func (c UserClaims) Token() (string, error) {
 	key, err := JWTSecretKeyFn(nil)
 	if err != nil {
 		return "", err
-	}
-	if update {
-		err = UserDB.Updates(&c).Error
-		if err != nil {
-			return "", err
-		}
-		tokenIssuedAt.Store(c.UID, c.IssuedAt)
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(key)
 }
@@ -50,7 +44,7 @@ func (c UserClaims) Token(update bool) (string, error) {
 func JWTAuth(ctx *gin.Context) (uid string, err error) {
 	// 优先从请求头获取
 	token := ctx.GetHeader("Authorization")
-	// 再从请求参数中获取 用于覆盖 Cookies
+	// 再从请求参数中获取
 	if token == "" {
 		query := ctx.Request.URL.Query()
 		token = query.Get("auth")
@@ -60,10 +54,6 @@ func JWTAuth(ctx *gin.Context) (uid string, err error) {
 			ctx.Request.URL.RawQuery = query.Encode()
 		}
 	}
-	// 最后在 Cookies 里找
-	if token == "" {
-		token, _ = ctx.Cookie("auth")
-	}
 	if token == "" {
 		return "", ErrAuthNotExist
 	}
@@ -72,7 +62,5 @@ func JWTAuth(ctx *gin.Context) (uid string, err error) {
 	if err != nil {
 		return "", err
 	}
-	// 鉴权成功则写入 Cookies
-	ctx.SetCookie("auth", token, 0, "", "", false, false)
 	return user.UID, nil
 }
