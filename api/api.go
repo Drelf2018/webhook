@@ -27,7 +27,6 @@ var visitor = group.Group{
 		PostBlogs,
 		GetBlogID,
 		GetTasks,
-		GetToken,
 		PostUser,
 		GetUserUID,
 	},
@@ -77,7 +76,7 @@ var owner = group.Group{
 //go:linkname api
 var api = group.Group{
 	Path:      "api",
-	Handlers:  group.H{GetVersion, GetValid, GetPing, GetOnline},
+	Handlers:  group.H{GetVersion, GetValid, GetPing, GetOnline, GetToken},
 	Groups:    group.G{visitor, user, admin, owner},
 	Convertor: group.Convertor,
 }

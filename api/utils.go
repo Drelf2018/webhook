@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Drelf2018/webhook/model"
+	"github.com/Drelf2018/webhook/registrar"
 	"github.com/Drelf2018/webhook/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -68,6 +69,64 @@ func GetOnline(ctx *gin.Context) (any, error) {
 		return true
 	})
 	return m, nil
+}
+
+// 获取 Token
+func GetToken(ctx *gin.Context) (data any, err error) {
+	// 先从请求参数获取账号信息
+	var q struct {
+		UID     string `form:"uid"`
+		PWD     string `form:"pwd"`
+		Refresh bool   `form:"refresh"`
+	}
+	err = ctx.ShouldBindQuery(&q)
+	if err != nil {
+		return 1, err
+	}
+	// 否则从请求头获取
+	if q.UID == "" {
+		q.UID, q.PWD, err = registrar.BasicAuth(ctx)
+		if err != nil {
+			return 2, err
+		}
+	}
+	// 校验账号存在和密码正确
+	user := &model.User{UID: q.UID}
+	tx := UserDB.Limit(1).Find(user)
+	if tx.Error != nil {
+		return 3, tx.Error
+	}
+	if tx.RowsAffected == 0 {
+		return 4, ErrUserNotExist
+	}
+	if user.Password != q.PWD {
+		return 5, ErrIncorrectPwd
+	}
+	// 校验账号是否封禁
+	now := time.Now()
+	if user.Ban.After(now) {
+		return 6, ErrBanned
+	}
+	// 使用当前时间创建用户声明
+	// 若已有声明且不刷新则沿用
+	// 否则将当前时间保存在数据库中
+	claim := &UserClaims{user.UID, now.UnixMilli()}
+	iat, found := tokenIssuedAt.Load(user.UID)
+	if found && !q.Refresh {
+		claim.IssuedAt = iat.(int64)
+	} else {
+		err = UserDB.Updates(claim).Error
+		if err != nil {
+			return 7, err
+		}
+		tokenIssuedAt.Store(claim.UID, claim.IssuedAt)
+	}
+	// 生成 Token
+	token, err := claim.Token()
+	if err != nil {
+		return 8, err
+	}
+	return token, nil
 }
 
 // 请求转发 https://blog.csdn.net/qq_29799655/article/details/113841064
