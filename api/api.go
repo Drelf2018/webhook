@@ -22,37 +22,6 @@ import (
 // 下载器
 var downloader *utils.Downloader
 
-// 请求转发 https://blog.csdn.net/qq_29799655/article/details/113841064
-func AnyForwardURL(ctx *gin.Context) (any, error) {
-	// 复刻请求
-	url := strings.TrimPrefix(ctx.Param("url"), "/")
-	req := ctx.Request.Clone(context.Background())
-	req.URL.Scheme, url, _ = strings.Cut(url, "/")
-	req.URL.Host, url, _ = strings.Cut(url, "/")
-	req.URL.Path = "/" + url
-	req.Host = req.URL.Host
-	req.RemoteAddr = ""
-	req.RequestURI = ""
-	// 发送新请求
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return 1, err
-	}
-	// 写入状态码和 Header
-	ctx.Status(resp.StatusCode)
-	header := ctx.Writer.Header()
-	for k, vs := range resp.Header {
-		for _, v := range vs {
-			header.Add(k, v)
-		}
-	}
-	// 将 Body 写回原请求中
-	_, err = io.Copy(ctx.Writer, resp.Body)
-	if err != nil {
-		return 2, err
-	}
-	return nil, nil
-}
 
 var visitor = group.Group{
 	Handlers: group.H{

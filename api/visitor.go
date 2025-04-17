@@ -13,59 +13,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const Version = "v0.18.4"
-
-var version = struct {
-	Api   string    `json:"api"`
-	Env   string    `json:"env"`
-	Start time.Time `json:"start"`
-	Index []string  `json:"index"`
-}{
-	Api: Version,
-	Env: fmt.Sprintf("%s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH),
-}
-
-func init() {
-	time.Local, _ = time.LoadLocation("Asia/Shanghai")
-	version.Start = time.Now()
-}
-
-const Success string = "success"
-
-// 当前版本信息
-func GetVersion(ctx *gin.Context) (any, error) {
-	return version, nil
-}
-
-// 校验鉴权码
-func GetValid(ctx *gin.Context) (any, error) {
-	_, err := JWTAuth(ctx)
-	return err == nil, nil
-}
-
-var onlineUsers sync.Map // map[string]time.Time
-
-// 更新在线时间
-func GetPing(ctx *gin.Context) (any, error) {
-	uid, err := JWTAuth(ctx)
-	if err != nil {
-		Error(ctx, err)
-		return 1, err
-	}
-	onlineUsers.Store(uid, time.Now())
-	return "pong", nil
-}
-
-// 获取当前在线状态
-func GetOnline(ctx *gin.Context) (any, error) {
-	now := time.Now()
-	m := make(map[string]int64)
-	onlineUsers.Range(func(key, value any) bool {
-		m[key.(string)] = now.Sub(value.(time.Time)).Milliseconds()
-		return true
-	})
-	return m, nil
-}
 
 // 注册账户
 func PostRegister(ctx *gin.Context) (any, error) {

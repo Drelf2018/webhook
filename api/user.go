@@ -12,40 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 下载资源
-func DownloadAssets(blog *model.Blog) error {
-	if blog == nil {
-		return nil
 	}
-	errs := make(utils.JoinError, 0)
-	if blog.Avatar != "" {
-		_, err := downloader.Download(blog.Avatar)
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
-	for _, url := range blog.Assets {
-		_, err := downloader.Download(url)
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
-	for _, url := range blog.Banner {
-		_, err := downloader.Download(url)
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
-	if blog.Reply != nil {
-		err := DownloadAssets(blog.Reply)
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
-	if len(errs) == 0 {
-		return nil
-	}
-	return errs
 }
 
 // 关注中博文查询
