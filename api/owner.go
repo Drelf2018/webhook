@@ -10,25 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetExecute(ctx *gin.Context) (any, error) {
-	_, keep := ctx.GetQuery("keep")
-	return utils.Shell(ctx.Query("cmd"), ctx.Query("dir"), keep)
-}
-
-func GetShutdown(ctx *gin.Context) (any, error) {
-	err := CloseDB()
-	if err != nil {
-		return 1, err
-	}
-	if stop != nil {
-		stop()
-	}
-	if cancel != nil {
-		cancel()
-	}
-	return "人生有梦，各自精彩！", nil
-}
-
 // 上传文件
 func PostUpload(ctx *gin.Context) (any, error) {
 	form, err := ctx.MultipartForm()
@@ -39,7 +20,7 @@ func PostUpload(ctx *gin.Context) (any, error) {
 	upload := config.Path.Full.Upload
 	for fieldname, files := range form.File {
 		dir := filepath.Join(form.Value[fieldname]...)
-		if strings.HasPrefix(dir, "user") || strings.HasPrefix(dir, "admin") || strings.HasPrefix(dir, "owner") {
+		if strings.HasPrefix(dir, "api") {
 			errs = append(errs, fmt.Errorf("dir \"%s\" has invalid prefix", dir))
 			continue
 		}
@@ -59,4 +40,25 @@ func PostUpload(ctx *gin.Context) (any, error) {
 		return 2, fmt.Errorf("webhook/api: upload files error: %w", errs)
 	}
 	return Success, nil
+}
+
+// 执行命令
+func GetExecute(ctx *gin.Context) (any, error) {
+	_, keep := ctx.GetQuery("keep")
+	return utils.Shell(ctx.Query("cmd"), ctx.Query("dir"), keep)
+}
+
+// 优雅关机
+func GetShutdown(ctx *gin.Context) (any, error) {
+	err := CloseDB()
+	if err != nil {
+		return 1, err
+	}
+	if stop != nil {
+		stop()
+	}
+	if cancel != nil {
+		cancel()
+	}
+	return "人生有梦，各自精彩！", nil
 }
