@@ -29,22 +29,24 @@ func Error(ctx *gin.Context, err error) {
 	}
 }
 
-func init() {
-	group.DefaultConvertor = func(f group.HandlerFunc) gin.HandlerFunc {
-		return func(ctx *gin.Context) {
-			if data, err := f(ctx); err == nil {
-				Info(ctx)
-				if data != nil {
-					ctx.JSON(http.StatusOK, group.Response{Code: 0, Error: "", Data: data})
-				}
+func LoggerConvertor(f group.HandlerFunc) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		if data, err := f(ctx); err == nil {
+			Info(ctx)
+			if data != nil {
+				ctx.JSON(http.StatusOK, group.Response{Code: 0, Error: "", Data: data})
+			}
+		} else {
+			Error(ctx, err)
+			if code, ok := data.(int); ok {
+				ctx.JSON(http.StatusOK, group.Response{Code: code, Error: err.Error(), Data: nil})
 			} else {
-				Error(ctx, err)
-				if code, ok := data.(int); ok {
-					ctx.JSON(http.StatusOK, group.Response{Code: code, Error: err.Error(), Data: nil})
-				} else {
-					ctx.JSON(http.StatusOK, group.Response{Code: 1, Error: err.Error(), Data: data})
-				}
+				ctx.JSON(http.StatusOK, group.Response{Code: 1, Error: err.Error(), Data: data})
 			}
 		}
 	}
+}
+
+func init() {
+	group.DefaultConvertor = LoggerConvertor
 }
