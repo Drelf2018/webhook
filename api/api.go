@@ -1,11 +1,8 @@
 package api
 
 import (
-	"context"
-	"io"
 	"net/http"
 	"path/filepath"
-	"strings"
 	"time"
 
 	group "github.com/Drelf2018/gin-group"
@@ -17,64 +14,80 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+
+	_ "unsafe"
 )
 
-// 下载器
-var downloader *utils.Downloader
-
-
+// 访客接口
+//
+//go:linkname visitor
 var visitor = group.Group{
 	Handlers: group.H{
-		GetVersion,
-		GetOnline,
-		PostRegister,
-		GetToken,
-		GetUserUID,
-		PostFilters,
-		GetTasks,
 		GetBlogs,
+		PostBlogs,
 		GetBlogID,
+		GetTasks,
+		GetToken,
+		PostUser,
+		GetUserUID,
 	},
 }
 
+// 用户接口
+//
+//go:linkname user
 var user = group.Group{
 	Middlewares: group.M{IsUser},
 	Handlers: group.H{
+		GetUser,
+		PatchUserUID,
 		GetFollowing,
 		PostBlog,
 		PostTask,
 		GetTaskID,
 		PatchTaskID,
 		DeleteTaskID,
-		GetUser,
 		PostTest,
-		PostTests,
-		PatchUserUID,
 	},
 }
 
+// 管理员接口
+//
+//go:linkname admin
 var admin = group.Group{
 	Middlewares: group.M{IsAdmin},
 	CustomFunc:  func(r gin.IRouter) { r.StaticFS("/logs", http.Dir(config.Path.Full.Logs)) },
 }
 
+// 所有者接口
+//
+//go:linkname owner
 var owner = group.Group{
 	Middlewares: group.M{IsOwner},
 	CustomFunc:  func(r gin.IRouter) { r.StaticFS("/root", http.Dir(config.Path.Full.Root)) },
 	Handlers: group.H{
+		PostUpload,
 		GetExecute,
 		GetShutdown,
-		PostUpload,
 	},
 }
 
+// 所有接口
+//
+//go:linkname api
 var api = group.Group{
 	Path:      "api",
-	Handlers:  group.H{GetValid, GetPing},
+	Handlers:  group.H{GetVersion, GetValid, GetPing, GetOnline},
 	Groups:    group.G{visitor, user, admin, owner},
 	Convertor: group.Convertor,
 }
 
+// 下载器
+var downloader *utils.Downloader
+
+// 后端
+//
+// 实现了前端页面、资源获取、请求转发
 var Backend = group.Group{
 	Middlewares: group.M{group.CORS, Index},
 	CustomFunc: func(r gin.IRouter) {

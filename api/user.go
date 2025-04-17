@@ -3,35 +3,41 @@ package api
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/Drelf2018/webhook/model"
-	"github.com/Drelf2018/webhook/utils"
 	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
 )
 
+// 获取自身信息
+func GetUser(ctx *gin.Context) (any, error) {
+	user := &model.User{UID: GetUID(ctx)}
+	err := UserDB.Preload("Tasks").Preload("Tasks.Filters").First(user).Error
+	if err != nil {
+		return 1, err
 	}
+	return user, nil
 }
 
 // 关注中博文查询
 func GetFollowing(ctx *gin.Context) (any, error) {
-	c := Condition{
+	c := &Condition{
 		Reply:    true,
 		Comments: true,
 		Order:    "time desc",
 	}
-	err := ctx.ShouldBindQuery(&c)
+	err := ctx.ShouldBindQuery(c)
 	if err != nil {
 		return 1, err
 	}
+	var filters []model.Filter
 	taskID := UserDB.Model(&model.Task{}).Distinct("id").Where("user_id = ?", GetUID(ctx))
-	err = UserDB.Find(&c.Filters, "task_id IN (?)", taskID).Error
+	err = UserDB.Find(&filters, "task_id IN (?)", taskID).Error
 	if err != nil {
 		return 2, err
 	}
-	blogs, err := c.Finds(BlogDB)
+	blogs, err := c.Finds(BlogDB, filters...)
 	if err != nil {
 		return 3, err
 	}
@@ -47,6 +53,7 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	}
 	blog.Submitter = GetUID(ctx)
 	err = BlogDB.Create(blog).Error
+	// (*Blog).AfterCreate 在没找到它回复的博文时会返回这个错误
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return 2, ErrBlogNotExist
 	}
@@ -130,20 +137,26 @@ func GetTaskID(ctx *gin.Context) (any, error) {
 		return 2, ErrTaskNotExist
 	}
 	uid := GetUID(ctx)
-	if !task.Public && task.UserID != uid && uid != config.Role.Owner {
+	if task.UserID != uid && !task.Public && uid != config.Role.Owner {
 		return 3, ErrPermDenied
 	}
-	offset, err := strconv.Atoi(ctx.DefaultQuery("offset", "0"))
+	var q struct {
+		Offset int `form:"offset"`
+		Limit  int `form:"limit"`
+	}
+	err := ctx.ShouldBindQuery(&q)
 	if err != nil {
 		return 4, err
 	}
-	limit, err := strconv.Atoi(ctx.DefaultQuery("limit", "100"))
+	switch {
+	case q.Limit > 1000:
+		q.Limit = 1000
+	case q.Limit <= 0:
+		q.Limit = 30
+	}
+	err = UserDB.Order("created_at desc").Offset(q.Offset).Limit(q.Limit).Find(&task.Logs, "task_id = ?", task.ID).Error
 	if err != nil {
 		return 5, err
-	}
-	err = UserDB.Debug().Order("created_at desc").Offset(offset).Limit(limit).Find(&task.Logs, "task_id = ?", task.ID).Error
-	if err != nil {
-		return 6, err
 	}
 	return task, nil
 }
@@ -160,52 +173,42 @@ func DeleteTaskID(ctx *gin.Context) (any, error) {
 	return Success, nil
 }
 
-// 获取自身信息
-func GetUser(ctx *gin.Context) (any, error) {
-	user := &model.User{UID: GetUID(ctx)}
-	err := UserDB.Preload("Tasks").Preload("Tasks.Filters").First(user).Error
-	if err != nil {
-		return 1, err
-	}
-	return user, nil
-}
-
-// 测试单个任务
+// 测试任务
 func PostTest(ctx *gin.Context) (any, error) {
 	var data struct {
-		Blog *model.Blog `json:"blog"`
-		Task *model.Task `json:"task"`
+		Blog   *model.Blog `json:"blog"`
+		Task   *model.Task `json:"task"`
+		BlogID uint64      `json:"blog_id"`
+		TaskID []uint64    `json:"task_id"`
 	}
 	err := ctx.ShouldBindJSON(&data)
 	if err != nil {
 		return 1, err
 	}
-	if data.Blog == nil {
-		return 2, ErrBlogNotExist
-	}
-	if data.Task == nil {
-		return 3, ErrTaskNotExist
-	}
-	return model.NewTemplate(data.Blog).RunTask(data.Task), nil
-}
-
-// 测试已有任务
-func PostTests(ctx *gin.Context) (any, error) {
-	var data struct {
-		Blog  *model.Blog `json:"blog"`
-		Tasks []uint64    `json:"tasks"`
-	}
-	err := ctx.ShouldBindJSON(&data)
-	if err != nil {
-		return 1, err
+	if data.BlogID != 0 {
+		tx := BlogDB.Limit(1).Find(&data.Blog, "id = ?", data.BlogID)
+		if tx.Error != nil {
+			return 2, tx.Error
+		}
+		if tx.RowsAffected == 0 {
+			return 3, ErrBlogNotExist
+		}
 	}
 	if data.Blog == nil {
-		return 2, ErrBlogNotExist
+		return 4, ErrBlogNotExist
 	}
+	// 直接测试
+	if len(data.TaskID) == 0 {
+		if data.Task == nil {
+			return 5, ErrTaskNotExist
+		}
+		return []model.RequestLog{model.NewTemplate(data.Blog).RunTask(data.Task)}, nil
+	}
+	// 查找任务
 	var tasks []*model.Task
-	err = UserDB.Find(&tasks, "user_id = ? AND id IN ?", GetUID(ctx), data.Tasks).Error
+	err = UserDB.Find(&tasks, "user_id = ? AND id IN ?", GetUID(ctx), data.TaskID).Error
 	if err != nil {
-		return 3, err
+		return 6, err
 	}
 	return model.NewTemplate(data.Blog).RunTasks(tasks), nil
 }
