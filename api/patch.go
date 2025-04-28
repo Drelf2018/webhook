@@ -197,10 +197,18 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 		switch patch.Path {
 		default:
 			err = fmt.Errorf(ErrInvalidPath, patch.Path)
+		case "/public":
+			if patch.Op == "add" {
+				task.Public = true
+			} else {
+				err = fmt.Errorf(ErrInvalidOp, patch.Op)
+			}
 		case "/enable":
 			task.Enable, err = strconv.ParseBool(patch.Value)
 		case "/name":
 			task.Name = patch.Value
+		case "/icon":
+			task.Icon = patch.Value
 		case "/method":
 			task.Method = patch.Value
 		case "/url":
@@ -212,6 +220,7 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 			err = json.Unmarshal([]byte(patch.Value), &header)
 			task.Header = header
 		case "/README":
+		case "/readme":
 			task.README = patch.Value
 		case "/filters":
 			var filters []model.Filter
