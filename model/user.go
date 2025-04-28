@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -100,10 +99,6 @@ func (f Filter) IsZero() bool {
 
 func (f Filter) IsValid() bool {
 	return !f.IsZero() && f.TaskID != 0
-}
-
-func (f Filter) String() string {
-	return fmt.Sprintf("%s.%s.%s.%s", f.Platform, f.Type, f.UID, f.Submitter)
 }
 
 // 请求记录

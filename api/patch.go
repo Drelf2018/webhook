@@ -219,10 +219,11 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 			if err != nil {
 				break
 			}
-			task.Filters = removeDuplicatesFilters(filters)
-			if len(task.Filters) == 0 {
+			if len(filters) == 0 {
 				err = ErrFilterNotExist
+				break
 			}
+			task.Filters = DeduplicateFilters(filters)
 		}
 		if err != nil {
 			errs = append(errs, group.Response{Code: i, Error: err.Error()})

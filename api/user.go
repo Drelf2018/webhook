@@ -93,15 +93,15 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	return blog.ID, nil
 }
 
-func removeDuplicatesFilters(filters []model.Filter) (result []model.Filter) {
-	exists := make(map[string]struct{}, len(filters))
+// 筛选条件去重
+func DeduplicateFilters(filters []model.Filter) (result []model.Filter) {
+	exists := make(map[model.Filter]struct{}, len(filters))
 	for _, f := range filters {
-		if _, ok := exists[f.String()]; ok {
-			continue
-		}
-		exists[f.String()] = struct{}{}
-		if !f.IsZero() {
-			result = append(result, f)
+		if _, ok := exists[f]; !ok {
+			exists[f] = struct{}{}
+			if !f.IsZero() {
+				result = append(result, f)
+			}
 		}
 	}
 	return
@@ -114,10 +114,10 @@ func PostTask(ctx *gin.Context) (any, error) {
 	if err != nil {
 		return 1, err
 	}
-	task.Filters = removeDuplicatesFilters(task.Filters)
 	if len(task.Filters) == 0 {
 		return 2, ErrFilterNotExist
 	}
+	task.Filters = DeduplicateFilters(task.Filters)
 	task.UserID = GetUID(ctx)
 	err = UserDB.Create(task).Error
 	if err != nil {
