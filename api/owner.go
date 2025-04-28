@@ -44,15 +44,23 @@ func PostUpload(ctx *gin.Context) (any, error) {
 
 // 执行命令
 func GetExecute(ctx *gin.Context) (any, error) {
-	_, keep := ctx.GetQuery("keep")
-	return utils.Shell(ctx.Query("cmd"), ctx.Query("dir"), keep)
+	var q struct {
+		CMD  string `form:"cmd"`
+		Dir  string `form:"dir"`
+		Keep bool   `form:"keep"`
+	}
+	err := ctx.ShouldBindQuery(&q)
+	if err != nil {
+		return 1, err
+	}
+	return utils.Shell(q.CMD, q.Dir, q.Keep)
 }
 
 // 优雅关机
 func GetShutdown(ctx *gin.Context) (any, error) {
 	err := CloseDB()
 	if err != nil {
-		return 1, err
+		return 1, fmt.Errorf("webhook/api: shutdown error: %w", err)
 	}
 	if stop != nil {
 		stop()
