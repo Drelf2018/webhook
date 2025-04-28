@@ -1,15 +1,13 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
-	group "github.com/Drelf2018/gin-group"
 	"github.com/Drelf2018/webhook/model"
+	"github.com/Drelf2018/webhook/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,18 +21,6 @@ type PatchBody struct {
 	Path  string `json:"path"`
 	Value string `json:"value,omitempty"`
 	From  string `json:"from,omitempty"`
-}
-
-func createError(errs []group.Response) error {
-	buf := bytes.NewBufferString("webhook/api: [")
-	for i, r := range errs {
-		if i != 0 {
-			buf.WriteString("; ")
-		}
-		buf.WriteString(fmt.Sprintf("%s (%d)", r.Error, r.Code))
-	}
-	buf.WriteByte(']')
-	return errors.New(buf.String())
 }
 
 // 修改用户信息
@@ -60,7 +46,7 @@ func PatchUserUID(ctx *gin.Context) (any, error) {
 		return 4, err
 	}
 
-	var errs []group.Response
+	errs := make(utils.JoinError, 0)
 	for i, patch := range body {
 		err = nil
 		switch patch.Path {
@@ -79,12 +65,12 @@ func PatchUserUID(ctx *gin.Context) (any, error) {
 			err = PatchUserNickname(ctx, me, user, patch)
 		}
 		if err != nil {
-			errs = append(errs, group.Response{Code: i, Error: err.Error()})
+			errs = append(errs, fmt.Errorf("%w (%d)", err, i))
 		}
 	}
 
 	if len(errs) != 0 {
-		return 5, createError(errs)
+		return 5, fmt.Errorf("webhook/api: patch user error: %w", errs)
 	}
 
 	err = UserDB.Save(user).Error
@@ -191,7 +177,7 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 		return 3, ErrTaskNotExist
 	}
 
-	var errs []group.Response
+	errs := make(utils.JoinError, 0)
 	for i, patch := range body {
 		err = nil
 		switch patch.Path {
@@ -219,7 +205,6 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 			var header model.Header
 			err = json.Unmarshal([]byte(patch.Value), &header)
 			task.Header = header
-		case "/README":
 		case "/readme":
 			task.README = patch.Value
 		case "/filters":
@@ -235,12 +220,12 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 			task.Filters = DeduplicateFilters(filters)
 		}
 		if err != nil {
-			errs = append(errs, group.Response{Code: i, Error: err.Error()})
+			errs = append(errs, fmt.Errorf("%w (%d)", err, i))
 		}
 	}
 
 	if len(errs) != 0 {
-		return 4, createError(errs)
+		return 4, fmt.Errorf("webhook/api: patch task error: %w", errs)
 	}
 
 	if len(task.Filters) != 0 {
