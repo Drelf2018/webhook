@@ -40,7 +40,7 @@ type Response struct {
 
 这里提到的模型可以在 [model](https://github.com/Drelf2018/webhook/tree/main/model) 文件夹找到。
 
-### 博文 {#custom-1}
+### 博文
 
 ```go
 type Blog struct {
@@ -77,7 +77,7 @@ type Blog struct {
 }
 ```
 
-### 任务 {#custom-2}
+### 任务
 
 任务公开后，就可以被搜索到，除非你希望教他人如何创建任务，且你的请求参数中不包含敏感信息，否则不要公开。
 
@@ -108,7 +108,7 @@ type Task struct {
 }
 ```
 
-### 筛选条件 {#custom-3}
+### 筛选条件
 
 博文筛选条件，用来描述一类博文，例如：`filter1` 表示所有平台为 `"weibo"`、类型为 `"comment"` 的博文，`filter2` 表示所有由 `"114"` 提交的用户 `"514"` 的博文。
 
@@ -147,7 +147,7 @@ type RequestLog struct {
 }
 ```
 
-### 查询条件 {#custom-4}
+### 查询条件
 
 特殊的，在文件 [visitor.go](https://github.com/Drelf2018/webhook/tree/main/api/visitor.go) 中有这样一个结构体，允许从后端获取博文时使用部分 `SQL` 参数，参数 `Reply` 为真时会将博文转发的那条博文一并返回。参数 `Comments` 为真时会将博文的评论一并返回。
 
@@ -386,8 +386,8 @@ https://api.bilibili.com/x/web-interface/card?mid=2
 
 | 参数名  | 参数类型               | 参数含义                                                     |
 | ------- | ---------------------- | ------------------------------------------------------------ |
-|         | [Condition](#custom-4) | 用 Condition 结构体的 6 个字段作为参数                       |
-|         | [Filter](#custom-3)    | 用 Filter 结构体的 4 个字段作为参数                          |
+|         | [Condition](#查询条件) | 用 Condition 结构体的 6 个字段作为参数                       |
+|         | [Filter](#筛选条件)    | 用 Filter 结构体的 4 个字段作为参数                          |
 | mid     | string                 | 要查询博文的序号                                             |
 | task_id | []uint64               | 此参数非空时，会忽略 `Filter` 和 `mid` 参数，并从所有公开或本人的任务中匹配任务序号，再合并所有匹配成功的任务的筛选条件，最后用这些条件筛选出博文 |
 
@@ -448,8 +448,8 @@ https://api.bilibili.com/x/web-interface/card?mid=2
 
 | 参数名  | 参数类型               | 参数含义                               |
 | ------- | ---------------------- | -------------------------------------- |
-|         | [Condition](#custom-4) | 用 Condition 结构体的 6 个字段作为参数 |
-| filters | [[]Filter](#custom-3)  | 筛选条件                               |
+|         | [Condition](#查询条件) | 用 Condition 结构体的 6 个字段作为参数 |
+| filters | [[]Filter](#筛选条件)  | 筛选条件                               |
 
 返回格式同基础查询。
 
@@ -660,7 +660,7 @@ https://api.bilibili.com/x/web-interface/card?mid=2
 
 | 参数名 | 参数类型               | 参数含义                               |
 | ------ | -------- | -------------------------------- |
-|        | [Condition](#custom-4) | 用 Condition 结构体的 6 个字段作为参数 |
+|        | [Condition](#查询条件) | 用 Condition 结构体的 6 个字段作为参数 |
 
 ```
 /api/following?limit=100&offset=200
@@ -715,7 +715,7 @@ https://api.bilibili.com/x/web-interface/card?mid=2
 
 | 参数名  | 参数类型 | 参数含义                             |
 | ------- | -------- | ------------------------------------ |
-|     | [Blog](#custom-1) | 待提交博文                      |
+|     | [Blog](#博文) | 待提交博文                      |
 
 ```json
 {
@@ -730,7 +730,7 @@ https://api.bilibili.com/x/web-interface/card?mid=2
 
 | 参数名  | 参数类型 | 参数含义                             |
 | ------- | -------- | ------------------------------------ |
-|     | [Task](#custom-2) | 待提交任务              |
+|     | [Task](#任务) | 待提交任务              |
 
 ```json
 {
@@ -807,7 +807,7 @@ https://api.bilibili.com/x/web-interface/card?mid=2
 | /body    | replace  | 修改任务请求体                                               |
 | /header  | replace  | 修改任务请求头，参数为 `JSON` 格式的 `map[string]string`     |
 | /readme  | replace  | 修改任务描述                                                 |
-| /filters | replace  | 修改任务筛选条件，参数为 `JSON` 格式的 [Filter](#custom-3) 列表 |
+| /filters | replace  | 修改任务筛选条件，参数为 `JSON` 格式的 [Filter](#筛选条件) 列表 |
 
 ```
 /api/task/1
@@ -841,8 +841,8 @@ https://api.bilibili.com/x/web-interface/card?mid=2
 
 | 参数名  | 参数类型 | 参数含义                             |
 | ------- | -------- | ------------------------------------ |
-| blog    | [Blog](#custom-1) | 测试用博文                           |
-| task    | [Task](#custom-2) | 待测试任务                           |
+| blog    | [Blog](#博文) | 测试用博文                           |
+| task    | [Task](#任务) | 待测试任务                           |
 | blog_id | uint64            | 测试用博文序号，优先于上传的博文使用 |
 | task_id | []uint64          | 待测试博文序号，优先于上传的任务使用 |
 
