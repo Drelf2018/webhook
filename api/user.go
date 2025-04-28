@@ -46,19 +46,23 @@ func GetFollowing(ctx *gin.Context) (any, error) {
 
 // 提交博文
 func PostBlog(ctx *gin.Context) (any, error) {
+	ip := net.ParseIP(ctx.ClientIP())
+	if ip == nil || ip.IsLoopback() {
+		return 1, fmt.Errorf("webhook/api: client IP error: %v", ip)
+	}
 	blog := &model.Blog{}
 	err := ctx.ShouldBindJSON(blog)
 	if err != nil {
-		return 1, err
+		return 2, err
 	}
 	blog.Submitter = GetUID(ctx)
 	err = BlogDB.Create(blog).Error
 	// (*Blog).AfterCreate 在没找到它回复的博文时会返回这个错误
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return 2, ErrBlogNotExist
+		return 3, ErrBlogNotExist
 	}
 	if err != nil {
-		return 3, err
+		return 4, err
 	}
 	var tasks []*model.Task
 	err = UserDB.Find(&tasks, "enable AND id IN (?)",
@@ -74,7 +78,7 @@ func PostBlog(ctx *gin.Context) (any, error) {
 		),
 	).Error
 	if err != nil {
-		return 4, fmt.Errorf("webhook/api: %s: %v", blog, err)
+		return 5, fmt.Errorf("webhook/api: post %s: %w", blog, err)
 	}
 	go func(c *gin.Context) {
 		if len(tasks) != 0 {
@@ -86,7 +90,7 @@ func PostBlog(ctx *gin.Context) (any, error) {
 		if AutoDownload {
 			err := DownloadAssets(blog)
 			if err != nil {
-				Error(c, err)
+				Error(c, fmt.Errorf("webhook/api: auto download error: %w", err))
 			}
 		}
 	}(ctx.Copy())
