@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"net"
 
 	"github.com/Drelf2018/webhook/model"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ func GetUser(ctx *gin.Context) (any, error) {
 	return user, nil
 }
 
-// 关注中博文查询
+// 获取关注的博文
 func GetFollowing(ctx *gin.Context) (any, error) {
 	c := &Condition{
 		Reply:    true,
@@ -111,7 +112,7 @@ func DeduplicateFilters(filters []model.Filter) (result []model.Filter) {
 	return
 }
 
-// 新增任务
+// 提交任务
 func PostTask(ctx *gin.Context) (any, error) {
 	task := &model.Task{}
 	err := ctx.ShouldBindJSON(task)
@@ -145,8 +146,8 @@ func GetTaskID(ctx *gin.Context) (any, error) {
 		return 3, ErrPermDenied
 	}
 	var q struct {
-		Offset int `form:"offset"`
 		Limit  int `form:"limit"`
+		Offset int `form:"offset"`
 	}
 	err := ctx.ShouldBindQuery(&q)
 	if err != nil {

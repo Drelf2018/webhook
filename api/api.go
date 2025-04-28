@@ -86,7 +86,7 @@ var downloader *utils.Downloader
 
 // 后端
 //
-// 实现了前端页面、资源获取、请求转发
+// 实现了前端页面、获取资源、请求转发
 var Backend = group.Group{
 	Middlewares: group.M{group.CORS, Index},
 	CustomFunc: func(r gin.IRouter) {

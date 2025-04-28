@@ -36,7 +36,7 @@ func init() {
 	version.Start = time.Now()
 }
 
-// 当前版本信息
+// 获取版本信息
 func GetVersion(ctx *gin.Context) (any, error) {
 	return version, nil
 }
@@ -60,7 +60,7 @@ func GetPing(ctx *gin.Context) (any, error) {
 	return "pong", nil
 }
 
-// 获取当前在线状态
+// 获取在线状态
 func GetOnline(ctx *gin.Context) (any, error) {
 	now := time.Now()
 	m := make(map[string]int64)

@@ -64,7 +64,7 @@ func (c *Condition) Finds(tx *gorm.DB, filters ...model.Filter) (blogs []model.B
 	return
 }
 
-// 查询博文
+// 获取博文
 func GetBlogs(ctx *gin.Context) (any, error) {
 	c := &struct {
 		Condition
@@ -119,7 +119,7 @@ func GetBlogs(ctx *gin.Context) (any, error) {
 	return blogs, nil
 }
 
-// 筛选查询
+// 获取筛选后博文
 func PostBlogs(ctx *gin.Context) (any, error) {
 	c := &struct {
 		Condition
@@ -142,7 +142,7 @@ func PostBlogs(ctx *gin.Context) (any, error) {
 	return blogs, nil
 }
 
-// 查询单条博文
+// 获取单条博文
 func GetBlogID(ctx *gin.Context) (any, error) {
 	blog := &model.Blog{}
 	tx := BlogDB.Preload("Reply").Preload("Comments").Limit(1).Find(blog, "id = ?", ctx.Param("id"))
@@ -155,12 +155,12 @@ func GetBlogID(ctx *gin.Context) (any, error) {
 	return blog, nil
 }
 
-// 获取公开任务集
+// 获取任务集
 func GetTasks(ctx *gin.Context) (any, error) {
 	var q struct {
 		Key    string `form:"key"`
-		Offset int    `form:"offset"`
 		Limit  int    `form:"limit"`
+		Offset int    `form:"offset"`
 	}
 	err := ctx.ShouldBindQuery(&q)
 	if err != nil {
