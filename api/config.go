@@ -91,6 +91,10 @@ func (c *Config) AfterInitial() {
 	if !AutoSave {
 		AutoSave, _ = LoadOrStore(c.Extra, AutoSaveKey, false)
 	}
+
+	if TasksQuery == "" {
+		TasksQuery, _ = LoadOrStore(c.Extra, TasksQueryKey, tasksQuery)
+	}
 }
 
 var _ initial.AfterInitial1 = (*Config)(nil)

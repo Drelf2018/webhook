@@ -57,8 +57,7 @@ func PostBlog(ctx *gin.Context) (any, error) {
 		return 2, err
 	}
 	blog.Submitter = GetUID(ctx)
-	err = BlogDB.Create(blog).Error
-	// (*Blog).AfterCreate 在没找到它回复的博文时会返回这个错误
+	err = BlogDB.Create(blog).Error // (*Blog).AfterCreate 在没找到它回复的博文时会返回 gorm.ErrRecordNotFound 错误
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return 3, ErrBlogNotExist
 	}
@@ -66,20 +65,9 @@ func PostBlog(ctx *gin.Context) (any, error) {
 		return 4, err
 	}
 	var tasks []*model.Task
-	err = UserDB.Find(&tasks, "enable AND id IN (?)",
-		UserDB.Model(&model.Filter{}).Distinct("task_id").Where(
-			`(submitter = "" OR submitter = ?) AND
-			(platform = "" OR platform = ?) AND
-			(type = "" OR type = ?) AND
-			(uid = "" OR uid = ?)`,
-			blog.Submitter,
-			blog.Platform,
-			blog.Type,
-			blog.UID,
-		),
-	).Error
+	err = UserDB.Raw(TasksQuery, blog.Submitter, blog.Platform, blog.Type, blog.UID).Find(&tasks).Error
 	if err != nil {
-		return 5, fmt.Errorf("webhook/api: post %s: %w", blog, err)
+		return 5, fmt.Errorf("webhook/api: post %s error: %w", blog, err)
 	}
 	go func(c *gin.Context) {
 		if len(tasks) != 0 {
