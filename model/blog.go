@@ -22,7 +22,7 @@ type Blog struct {
 	URL    string    `json:"url"`    // 博文网址
 	Text   string    `json:"text"`   // 文本内容
 	Time   time.Time `json:"time"`   // 发送时间
-	Title  string    `json:"title"`  // 文章标题
+	Title  string    `json:"title"`  // 博文标题
 	Source string    `json:"source"` // 博文来源
 	Edited bool      `json:"edited"` // 是否编辑
 

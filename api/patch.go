@@ -206,7 +206,7 @@ func PatchTaskID(ctx *gin.Context) (any, error) {
 			err = json.Unmarshal([]byte(patch.Value), &header)
 			task.Header = header
 		case "/readme":
-			task.README = patch.Value
+			task.Readme = patch.Value
 		case "/filters":
 			var filters []model.Filter
 			err = json.Unmarshal([]byte(patch.Value), &filters)

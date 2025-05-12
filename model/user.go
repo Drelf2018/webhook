@@ -49,7 +49,7 @@ type Task struct {
 	URL    string `json:"url"`     // 请求地址
 	Body   string `json:"body"`    // 请求内容
 	Header Header `json:"header"`  // 请求头部
-	README string `json:"README"`  // 任务描述
+	Readme string `json:"readme"`  // 任务描述
 	ForkID uint64 `json:"fork_id"` // 复刻来源
 
 	ForkCount int `json:"fork_count" gorm:"-"` // 被复刻次数
