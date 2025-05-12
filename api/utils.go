@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	Version string = "v0.19.0"
+	Version string = "v0.19.1"
 	Success string = "success"
 )
 
