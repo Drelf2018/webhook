@@ -93,7 +93,7 @@ func (c *Config) AfterInitial() {
 	}
 
 	if TasksQuery == "" {
-		TasksQuery, _ = LoadOrStore(c.Extra, TasksQueryKey, tasksQuery)
+		TasksQuery, _ = LoadOrStore(c.Extra, TasksQueryKey, `SELECT * FROM tasks WHERE enable AND EXISTS (SELECT 1 FROM filters WHERE task_id = id AND (submitter = '' OR submitter = ?) AND (platform = '' OR platform = ?) AND (type = '' OR type = ?) AND (uid = '' OR uid = ?))`)
 	}
 }
 

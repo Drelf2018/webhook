@@ -22,19 +22,6 @@ var TasksQuery string
 
 const TasksQueryKey string = "tasks_query"
 
-const tasksQuery string = `SELECT *
-FROM tasks
-WHERE enable
-	AND EXISTS (
-		SELECT 1
-		FROM filters 
-		WHERE task_id = id
-			AND (submitter = "" OR submitter = ?)
-			AND (platform = "" OR platform = ?)
-			AND (type = "" OR type = ?)
-			AND (uid = "" OR uid = ?)
-	)`
-
 // 从配置中读取值，如果不存在则写入
 func LoadOrStore[T any](extra map[string]any, key string, value T) (actual T, loaded bool) {
 	if extra == nil {
