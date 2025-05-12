@@ -45,6 +45,26 @@ func GetFollowing(ctx *gin.Context) (any, error) {
 	return blogs, nil
 }
 
+// 想看你钩子
+func webhook(ctx *gin.Context, blog *model.Blog) {
+	if AutoDownload {
+		err := DownloadAssets(blog)
+		if err != nil {
+			Error(ctx, fmt.Errorf("webhook/api: auto download error: %w", err))
+		}
+	}
+	var tasks []*model.Task
+	err := UserDB.Raw(TasksQuery, blog.Submitter, blog.Platform, blog.Type, blog.UID).Find(&tasks).Error
+	if err != nil {
+		err = fmt.Errorf("webhook/api: post %s error: %w", blog, err)
+	} else if len(tasks) != 0 {
+		err = UserDB.Create(model.NewTemplate(blog).RunTasks(tasks)).Error
+	}
+	if err != nil {
+		Error(ctx, err)
+	}
+}
+
 // 提交博文
 func PostBlog(ctx *gin.Context) (any, error) {
 	ip := net.ParseIP(ctx.ClientIP())
@@ -60,29 +80,10 @@ func PostBlog(ctx *gin.Context) (any, error) {
 	err = BlogDB.Create(blog).Error // (*Blog).AfterCreate 在没找到它回复的博文时会返回 gorm.ErrRecordNotFound 错误
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return 3, ErrBlogNotExist
-	}
-	if err != nil {
+	} else if err != nil {
 		return 4, err
 	}
-	var tasks []*model.Task
-	err = UserDB.Raw(TasksQuery, blog.Submitter, blog.Platform, blog.Type, blog.UID).Find(&tasks).Error
-	if err != nil {
-		return 5, fmt.Errorf("webhook/api: post %s error: %w", blog, err)
-	}
-	go func(c *gin.Context) {
-		if len(tasks) != 0 {
-			err := UserDB.Create(model.NewTemplate(blog).RunTasks(tasks)).Error
-			if err != nil {
-				Error(c, err)
-			}
-		}
-		if AutoDownload {
-			err := DownloadAssets(blog)
-			if err != nil {
-				Error(c, fmt.Errorf("webhook/api: auto download error: %w", err))
-			}
-		}
-	}(ctx.Copy())
+	go webhook(ctx.Copy(), blog)
 	return blog.ID, nil
 }
 
