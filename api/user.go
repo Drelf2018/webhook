@@ -45,45 +45,54 @@ func GetFollowing(ctx *gin.Context) (any, error) {
 	return blogs, nil
 }
 
-// 想看你钩子
-func webhook(ctx *gin.Context, blog *model.Blog) {
-	var tasks []*model.Task
-	err := UserDB.Raw(TasksQuery, blog.Submitter, blog.Platform, blog.Type, blog.UID).Find(&tasks).Error
-	if err != nil {
-		err = fmt.Errorf("webhook/api: post %s error: %w", blog, err)
-	} else if len(tasks) != 0 {
-		err = UserDB.Create(model.NewTemplate(blog).RunTasks(tasks)).Error
-	}
-	if err != nil {
-		Error(ctx, err)
-	}
-	if AutoDownload {
-		err = DownloadAssets(blog)
-		if err != nil {
-			Error(ctx, fmt.Errorf("webhook/api: auto download error: %w", err))
-		}
-	}
-}
-
 // 提交博文
 func PostBlog(ctx *gin.Context) (any, error) {
+	// 避免回环提交
 	ip := net.ParseIP(ctx.ClientIP())
 	if ip == nil || ip.IsLoopback() {
 		return 1, fmt.Errorf("webhook/api: client IP error: %v", ip)
 	}
+
+	// 绑定博文并写入提交者
+	// 防止有人打着别人名号提交
 	blog := &model.Blog{}
 	err := ctx.ShouldBindJSON(blog)
 	if err != nil {
 		return 2, err
 	}
 	blog.Submitter = GetUID(ctx)
-	err = BlogDB.Create(blog).Error // (*Blog).AfterCreate 在没找到它回复的博文时会返回 gorm.ErrRecordNotFound 错误
+
+	// (*Blog).AfterCreate 在没找到它回复的博文时会返回 gorm.ErrRecordNotFound 错误
+	err = BlogDB.Create(blog).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return 3, ErrBlogNotExist
 	} else if err != nil {
 		return 4, err
 	}
-	go webhook(ctx.Copy(), blog)
+
+	// 似乎在异步中操作数据库的话耗时会激增
+	// 所以只能苦一苦提交者
+	// 骂名阿里云来背
+	var tasks []*model.Task
+	err = UserDB.Raw(TasksQuery, blog.Submitter, blog.Platform, blog.Type, blog.UID).Find(&tasks).Error
+	if err != nil {
+		Error(ctx, fmt.Errorf("webhook/api: query %s error: %w", blog, err))
+	}
+
+	if len(tasks) != 0 {
+		err = UserDB.Create(model.NewTemplate(blog).RunTasks(tasks)).Error
+		if err != nil {
+			Error(ctx, fmt.Errorf("webhook/api: webhook %s error: %w", blog, err))
+		}
+	}
+
+	if AutoDownload {
+		err = DownloadAssets(blog)
+		if err != nil {
+			Error(ctx, fmt.Errorf("webhook/api: auto download error: %w", err))
+		}
+	}
+
 	return blog.ID, nil
 }
 
