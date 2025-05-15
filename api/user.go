@@ -47,12 +47,6 @@ func GetFollowing(ctx *gin.Context) (any, error) {
 
 // 想看你钩子
 func webhook(ctx *gin.Context, blog *model.Blog) {
-	if AutoDownload {
-		err := DownloadAssets(blog)
-		if err != nil {
-			Error(ctx, fmt.Errorf("webhook/api: auto download error: %w", err))
-		}
-	}
 	var tasks []*model.Task
 	err := UserDB.Raw(TasksQuery, blog.Submitter, blog.Platform, blog.Type, blog.UID).Find(&tasks).Error
 	if err != nil {
@@ -62,6 +56,12 @@ func webhook(ctx *gin.Context, blog *model.Blog) {
 	}
 	if err != nil {
 		Error(ctx, err)
+	}
+	if AutoDownload {
+		err = DownloadAssets(blog)
+		if err != nil {
+			Error(ctx, fmt.Errorf("webhook/api: auto download error: %w", err))
+		}
 	}
 }
 
