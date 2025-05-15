@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -183,23 +184,20 @@ func Initial(cfg *Config) error {
 		logger.AddHook(hook)
 	}
 
-	if AutoSave {
-		stop = time.AfterFunc(utils.NextTimeDuration(4, 0, 0), func() {
-			cfg.Path.CopyBlogDB()
-			ticker := time.NewTicker(24 * time.Hour)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-running.Done():
-					return
-				case <-ticker.C:
-					go cfg.Path.CopyBlogDB()
-				}
-			}
-		}).Stop
-	}
-
 	config = cfg
 
+	if AutoSave {
+		stop = time.AfterFunc(utils.NextTimeDuration(4, 0, 0), copy).Stop
+	}
+
 	return nil
+}
+
+func copy() {
+	err := config.Path.copy()
+	if err != nil {
+		log := filepath.Join(config.Path.Full.Backup, time.Now().Format("2006-01-02.log"))
+		os.WriteFile(log, []byte(err.Error()), os.ModePerm)
+	}
+	stop = time.AfterFunc(24*time.Hour, copy).Stop
 }

@@ -17,12 +17,10 @@ import (
 	_ "unsafe"
 )
 
-//go:linkname running github.com/Drelf2018/webhook.running
-var running context.Context
-
 //go:linkname cancel github.com/Drelf2018/webhook.cancel
 var cancel context.CancelFunc
 
+// 停止自动保存
 var stop func() bool
 
 var config *Config
@@ -131,13 +129,6 @@ func (p *Path) copy() error {
 
 	_, err = io.Copy(backup, blogDB)
 	return err
-}
-
-func (p *Path) CopyBlogDB() {
-	if err := p.copy(); err != nil {
-		log := filepath.Join(p.Full.Backup, time.Now().Format("2006-01-02.log"))
-		os.WriteFile(log, []byte(err.Error()), os.ModePerm)
-	}
 }
 
 func (p *Path) AfterInitial() (err error) {
